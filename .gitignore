@@ -42,6 +42,9 @@ Fabric/
 ehthumbs.db
 Thumbs.db
 
+# AI Assistant Config
+.claude/
+
 # IntelliJ / Android Studio
 .idea/
 *.iml
