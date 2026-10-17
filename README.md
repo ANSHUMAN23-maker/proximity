@@ -83,17 +83,6 @@ app/src/main/java/com/proximity/app/
 - JDK 17+
 - Android SDK 35
 
-### Build
-```bash
-# Clone the repository
-git clone https://github.com/ANSHUMAN23-maker/proximity.git
-cd proximity
-
-# Open in Android Studio and sync Gradle
-# Build: ./gradlew assembleDebug
-# Run: ./gradlew installDebug
-```
-
 ### Signing
 Still Working On it. Haven't signed the app bundle and made an .aab so far
 
