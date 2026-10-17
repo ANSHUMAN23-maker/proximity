@@ -6,7 +6,6 @@ Proximity is an Android payment application that enables UPI transactions withou
 
 | Feature | Description |
 |---------|-------------|
-| **USSD Payments (*99#)** | Initiate UPI payments via USSD codes through the system dialer |
 | **QR Code Scanning** | Scan UPI QR codes to auto-fill payment details |
 | **Pay Contact** | Send payments to saved contacts or phone numbers |
 | **Switch Themes** | Theme toggle for light/dark appearance |
