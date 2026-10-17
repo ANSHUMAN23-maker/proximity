@@ -1,4 +1,4 @@
-# Proximity — UPI Payment App (Offline-First)
+# Proximity — Make UPI Payments OFFLINE
 
 Proximity is an Android payment application that enables UPI transactions without requiring an active internet connection. It uses USSD (*99#) and TelecomManager-based call routing to process payments through the phone's native dialer and SMS infrastructure.
 
