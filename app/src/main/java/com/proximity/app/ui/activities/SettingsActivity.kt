@@ -1,0 +1,909 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Proximity
+
+// SettingsActivity.kt
+package com.proximity.app.ui.activities
+import androidx.compose.foundation.shape.RoundedCornerShape
+
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Bundle
+import android.provider.Settings
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+
+
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.proximity.app.BuildConfig
+import com.proximity.app.ProximityApplication
+import com.proximity.app.R
+import com.proximity.app.ui.components.SimOperatorLogoBadge
+import com.proximity.app.ui.components.pressScale
+import com.proximity.app.SetupActivity
+import com.proximity.app.data.SettingsRepository
+import com.proximity.app.repository.TransactionRepository
+import com.proximity.app.ui.components.AnimatedContourBackground
+import com.proximity.app.ui.theme.TealAccentTheme
+import com.proximity.app.ui.theme.ProximityAccentGreenBright
+import com.proximity.app.ui.theme.ProximityStatusError
+import com.proximity.app.ui.theme.LocalProximityAccentTheme
+import com.proximity.app.ui.theme.ProximityTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+class SettingsActivity : ComponentActivity() {
+
+    private var refreshTrigger = mutableIntStateOf(0)
+
+    private val permissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ -> refreshTrigger.intValue++ }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val app = application as? ProximityApplication
+        val settingsRepository = app?.settingsRepository ?: SettingsRepository(applicationContext)
+        setTheme(R.style.Theme_Proximity)
+        setContent {
+            val savedSettings by settingsRepository.settingsFlow.collectAsState()
+            CompositionLocalProvider(LocalProximityAccentTheme provides TealAccentTheme) {
+                ProximityTheme(darkTheme = savedSettings.darkModeEnabled) {
+                    SettingsScreen(
+                        onBackPressed = { finish() },
+                        settingsRepository = settingsRepository,
+                        selectedOperator = savedSettings.selectedOperator,
+                        onRequestPermissions = { permissions ->
+                            permissionLauncher.launch(permissions)
+                        },
+                        refreshTrigger = refreshTrigger
+                    )
+                }
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshTrigger.intValue++
+    }
+}
+
+// Data Classes
+data class Bank(
+    val id: String,
+    val name: String
+)
+
+data class SettingsState(
+    val selectedBank: Bank = banks.first(),
+    val ussdTimeout: Int = 30,
+    val smsDetectionEnabled: Boolean = true,
+    val overlayEnabled: Boolean = true,
+    val debugMode: Boolean = false,
+    val setupCompleted: Boolean = true,
+    val darkModeEnabled: Boolean = false,
+    val permissions: Map<String, Boolean> = emptyMap()
+)
+
+// Bank Data
+val banks = listOf(
+    Bank("hdfc", "HDFC Bank"),
+    Bank("sbi", "State Bank of India"),
+    Bank("icici", "ICICI Bank"),
+    Bank("axis", "Axis Bank"),
+    Bank("kotak", "Kotak Mahindra Bank"),
+    Bank("pnb", "Punjab National Bank"),
+    Bank("bob", "Bank of Baroda"),
+    Bank("yes", "Yes Bank"),
+    Bank("idbi", "IDBI Bank"),
+    Bank("canara", "Canara Bank"),
+    Bank("union", "Union Bank of India")
+)
+
+// ViewModel
+class SettingsViewModel : androidx.lifecycle.ViewModel() {
+    var state by mutableStateOf(SettingsState())
+        private set
+
+    fun updateBank(bank: Bank) {
+        state = state.copy(selectedBank = bank)
+    }
+
+    fun toggleSmsDetection() {
+        state = state.copy(smsDetectionEnabled = !state.smsDetectionEnabled)
+    }
+
+    fun toggleOverlay() {
+        state = state.copy(overlayEnabled = !state.overlayEnabled)
+    }
+
+    fun toggleDarkMode() {
+        state = state.copy(darkModeEnabled = !state.darkModeEnabled)
+    }
+
+    fun refreshPermissions(context: Context) {
+        val perms = mapOf(
+            "phone" to (
+                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) ==
+                    PackageManager.PERMISSION_GRANTED
+                ),
+            "camera" to (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                PackageManager.PERMISSION_GRANTED),
+            "sms" to (ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) ==
+                PackageManager.PERMISSION_GRANTED),
+            "contacts" to (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) ==
+                PackageManager.PERMISSION_GRANTED),
+            "notifications" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+                    PackageManager.PERMISSION_GRANTED
+            } else {
+                true
+            }),
+            "overlay" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                Settings.canDrawOverlays(context)
+            } else {
+                true
+            })
+        )
+        state = state.copy(permissions = perms)
+    }
+
+    fun loadFromRepository(settingsRepository: SettingsRepository) {
+        val saved = settingsRepository.settingsFlow.value
+        val bank = banks.find { it.id == saved.bankId } ?: banks.first()
+        state = state.copy(
+            selectedBank = bank,
+            ussdTimeout = saved.ussdTimeout,
+            smsDetectionEnabled = saved.smsDetectionEnabled,
+            overlayEnabled = saved.overlayEnabled,
+            debugMode = saved.debugMode,
+            setupCompleted = saved.setupCompleted,
+            darkModeEnabled = saved.darkModeEnabled
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(
+    viewModel: SettingsViewModel = viewModel(),
+    onBackPressed: () -> Unit,
+    settingsRepository: SettingsRepository? = null,
+    selectedOperator: String = "unknown",
+    onRequestPermissions: (Array<String>) -> Unit = {},
+    refreshTrigger: MutableIntState = mutableIntStateOf(0)
+) {
+    val context = LocalContext.current
+    val accent = LocalProximityAccentTheme.current
+    val state = viewModel.state
+
+    // Load settings from repository on first composition
+    LaunchedEffect(Unit) {
+        settingsRepository?.let { viewModel.loadFromRepository(it) }
+        viewModel.refreshPermissions(context)
+    }
+
+    // Refresh permissions when trigger changes
+    val trigger by refreshTrigger
+    LaunchedEffect(trigger) {
+        viewModel.refreshPermissions(context)
+    }
+
+    // Track primary SIM locally (starts from parameter, updated when user picks)
+    var primarySimId by remember { mutableStateOf(selectedOperator) }
+    val primarySim = when (primarySimId) {
+        "jio" -> "Jio"
+        "airtel" -> "Airtel"
+        "vodafone" -> "Vodafone"
+        "bsnl" -> "BSNL"
+        else -> stringResource(R.string.settings_not_set)
+    }
+
+    // Dialog states
+    var showBankPicker by remember { mutableStateOf(false) }
+    var showSimPicker by remember { mutableStateOf(false) }
+    var showClearDataConfirm by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        AnimatedContourBackground(modifier = Modifier.fillMaxSize())
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Top Bar
+            TopAppBar(
+                title = {
+                    com.proximity.app.ui.components.ProximityBrandedHeader(
+                        fontSize = 20.sp,
+                        logoSize = 28.dp
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackPressed) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.settings_back),
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
+            )
+
+            // Settings Content
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 32.dp)
+            ) {
+                item { SectionHeader("CONFIGURATION") }
+                item {
+                    GroupCard {
+                        SettingsRow(
+                            icon = Icons.Default.AccountBalance,
+                            title = "Bank",
+                            value = state.selectedBank.name,
+                            onClick = null
+                        )
+                        GroupDivider()
+                        SettingsRow(
+                            icon = Icons.Default.SimCard,
+                            title = "Primary SIM",
+                            value = primarySim,
+                            onClick = { showSimPicker = true }
+                        )
+                    }
+                }
+
+                item { Spacer(modifier = Modifier.height(8.dp)) }
+                item { SectionHeader("APPEARANCE") }
+                item {
+                    GroupCard {
+                        ToggleRow(
+                            icon = if (state.darkModeEnabled) Icons.Default.DarkMode else Icons.Default.LightMode,
+                            title = "Theme",
+                            subtitle = if (state.darkModeEnabled) "Dark theme enabled" else "Light theme enabled",
+                            checked = state.darkModeEnabled,
+                            onCheckedChange = {
+                                viewModel.toggleDarkMode()
+                                settingsRepository?.saveSettings(
+                                    settingsRepository.settingsFlow.value.copy(darkModeEnabled = !state.darkModeEnabled)
+                                )
+                            }
+                        )
+                    }
+                }
+
+                item { Spacer(modifier = Modifier.height(8.dp)) }
+                item { SectionHeader("PERMISSIONS") }
+                item {
+                    GroupCard {
+                        PermissionRow(
+                            icon = Icons.Default.Phone,
+                            title = "Phone",
+                            subtitle = "Calls & phone state",
+                            granted = state.permissions["phone"] ?: false,
+                            onRequest = {
+                                onRequestPermissions(
+                                    arrayOf(
+                                        Manifest.permission.READ_PHONE_STATE
+                                    )
+                                )
+                            }
+                        )
+                        GroupDivider()
+                        PermissionRow(
+                            icon = Icons.Default.CameraAlt,
+                            title = "Camera",
+                            subtitle = "QR code scanning",
+                            granted = state.permissions["camera"] ?: false,
+                            onRequest = {
+                                onRequestPermissions(arrayOf(Manifest.permission.CAMERA))
+                            }
+                        )
+                        GroupDivider()
+                        PermissionRow(
+                            icon = Icons.Default.Sms,
+                            title = "SMS",
+                            subtitle = "Bank payment confirmations",
+                            granted = state.permissions["sms"] ?: false,
+                            onRequest = {
+                                onRequestPermissions(arrayOf(Manifest.permission.RECEIVE_SMS))
+                            }
+                        )
+                        GroupDivider()
+                        PermissionRow(
+                            icon = Icons.Default.Contacts,
+                            title = "Contacts",
+                            subtitle = "Pay by contact",
+                            granted = state.permissions["contacts"] ?: false,
+                            onRequest = {
+                                onRequestPermissions(arrayOf(Manifest.permission.READ_CONTACTS))
+                            }
+                        )
+                        GroupDivider()
+                        PermissionRow(
+                            icon = Icons.Default.Notifications,
+                            title = "Notifications",
+                            subtitle = "Payment result notifications",
+                            granted = state.permissions["notifications"] ?: false,
+                            onRequest = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    onRequestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
+                                }
+                            }
+                        )
+                    }
+                }
+                item { Spacer(modifier = Modifier.height(8.dp)) }
+                item { SectionHeader("ABOUT") }
+                item {
+                    GroupCard {
+                        SettingsRow(
+                            icon = Icons.Default.Info,
+                            title = "Version",
+                            value = BuildConfig.VERSION_NAME
+                        )
+                        GroupDivider()
+                        SettingsRow(
+                            icon = Icons.Default.PhoneAndroid,
+                            title = "Android",
+                            value = Build.VERSION.RELEASE
+                        )
+                    }
+                }
+
+                item { Spacer(modifier = Modifier.height(16.dp)) }
+            }
+        }
+    }
+
+    // Bank Picker Dialog
+    if (showBankPicker) {
+        BankPickerDialog(
+            selectedBank = state.selectedBank,
+            onBankSelected = { bank ->
+                viewModel.updateBank(bank)
+                settingsRepository?.saveSettings(
+                    settingsRepository.settingsFlow.value.copy(bankId = bank.id)
+                )
+                // Also sync to ProximityPrefs so the main screen picks it up
+                context.getSharedPreferences("ProximityPrefs", Context.MODE_PRIVATE)
+                    .edit().putString("selected_bank", bank.id).apply()
+                showBankPicker = false
+            },
+            onDismiss = { showBankPicker = false }
+        )
+    }
+
+    // SIM Picker Dialog
+    if (showSimPicker) {
+        SimPickerDialog(
+            selectedSimId = primarySimId,
+            onSimSelected = { simId ->
+                primarySimId = simId
+                context.getSharedPreferences("ProximityPrefs", Context.MODE_PRIVATE)
+                    .edit().putString("selected_primary_sim", simId).apply()
+                settingsRepository?.saveSettings(
+                    settingsRepository.settingsFlow.value.copy(selectedOperator = simId)
+                )
+                showSimPicker = false
+            },
+            onDismiss = { showSimPicker = false }
+        )
+    }
+
+    // Clear Data Confirmation Dialog
+    if (showClearDataConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearDataConfirm = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            title = {
+                Text(
+                    stringResource(R.string.settings_clear_data_title),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 18.sp
+                )
+            },
+            text = {
+                Text(
+                    "This permanently deletes your entire transaction history and " +
+                        "resets all settings, then returns you to the setup screen. " +
+                        "This cannot be undone.",
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showClearDataConfirm = false
+                    // Wipe the encrypted transaction DB before anything else, on
+                    // the process scope so the delete survives the CLEAR_TASK
+                    // relaunch below; only then reset prefs and restart into Setup.
+                    val app = ProximityApplication.from(context)
+                    val relaunch = {
+                        settingsRepository?.clearAllData()
+                        context.getSharedPreferences("ProximityPrefs", Context.MODE_PRIVATE)
+                            .edit().clear().apply()
+                        context.startActivity(
+                            Intent(context, SetupActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            }
+                        )
+                    }
+                    if (app != null) {
+                        app.appScope.launch {
+                            runCatching {
+                                TransactionRepository.getInstance(context).deleteAllTransactions()
+                            }
+                            withContext(Dispatchers.Main) { relaunch() }
+                        }
+                    } else {
+                        relaunch()
+                    }
+                }) {
+                    Text(
+                        stringResource(R.string.action_clear),
+                        color = ProximityStatusError,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearDataConfirm = false }) {
+                    Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Medium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        letterSpacing = 1.sp,
+        modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp)
+    )
+}
+
+@Composable
+private fun GroupCard(content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(4.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Column(content = content)
+    }
+}
+
+@Composable
+private fun GroupDivider() {
+    HorizontalDivider(
+        color = MaterialTheme.colorScheme.outlineVariant,
+        thickness = 0.5.dp,
+        modifier = Modifier.padding(start = 56.dp)
+    )
+}
+
+@Composable
+private fun SettingsRow(
+    icon: ImageVector,
+    title: String,
+    value: String,
+    destructive: Boolean = false,
+    onClick: (() -> Unit)? = null
+) {
+    val accent = LocalProximityAccentTheme.current
+    val iconColor = if (destructive) ProximityStatusError else accent.primary
+    val iconBg = if (destructive) ProximityStatusError.copy(alpha = 0.12f) else accent.primary.copy(alpha = 0.12f)
+    val titleColor = if (destructive) ProximityStatusError else MaterialTheme.colorScheme.onSurface
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Icon
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(iconBg),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Title
+        Text(
+            text = title,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium,
+            color = titleColor,
+            modifier = Modifier.weight(1f)
+        )
+
+        // Value or chevron
+        if (onClick != null) {
+            Text(
+                text = value,
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 160.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
+        } else {
+            Text(
+                text = value,
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun ToggleRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String? = null,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    val accent = LocalProximityAccentTheme.current
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(accent.primary.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accent.primary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = accent.primary,
+                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        )
+    }
+}
+
+@Composable
+private fun PermissionRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    granted: Boolean,
+    onRequest: () -> Unit
+) {
+    val accent = LocalProximityAccentTheme.current
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Icon
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(accent.primary.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accent.primary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Title + subtitle
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        // Status pill
+        if (granted) {
+            Surface(
+                shape = RoundedCornerShape(4.dp),
+                color = ProximityAccentGreenBright.copy(alpha = 0.12f)
+            ) {
+                Text(
+                    text = "Granted",
+                    color = ProximityAccentGreenBright,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
+        } else {
+            Surface(
+                shape = RoundedCornerShape(4.dp),
+                color = accent.primary.copy(alpha = 0.12f),
+                modifier = Modifier.clickable(onClick = onRequest)
+            ) {
+                Text(
+                    text = "Grant",
+                    color = accent.primary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BankPickerDialog(
+    selectedBank: Bank,
+    onBankSelected: (Bank) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val accent = LocalProximityAccentTheme.current
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(4.dp),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier.padding(vertical = 20.dp)
+            ) {
+                Text(
+                    text = "Select Bank",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                )
+
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 400.dp)
+                ) {
+                    items(banks) { bank ->
+                        val isSelected = bank.id == selectedBank.id
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onBankSelected(bank) }
+                                .padding(horizontal = 20.dp, vertical = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = bank.name,
+                                fontSize = 15.sp,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (isSelected) accent.primary else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Selected",
+                                    tint = accent.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        if (bank != banks.last()) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant,
+                                thickness = 0.5.dp,
+                                modifier = Modifier.padding(horizontal = 20.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(horizontal = 12.dp)
+                ) {
+                    Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SimPickerDialog(
+    selectedSimId: String,
+    onSimSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val accent = LocalProximityAccentTheme.current
+    val sims = listOf(
+        "jio" to "Reliance Jio",
+        "airtel" to "Airtel",
+        "vodafone" to "Vodafone Idea",
+        "bsnl" to "BSNL"
+    )
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+        ) {
+            Column(modifier = Modifier.padding(vertical = 20.dp)) {
+                Text(
+                    text = "Select Primary SIM",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                sims.forEachIndexed { index, (id, name) ->
+                    val isSelected = id == selectedSimId
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .pressScale(onClick = { onSimSelected(id) })
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SimOperatorLogoBadge(operatorKey = id, size = 36.dp)
+
+                        Spacer(modifier = Modifier.width(14.dp))
+
+                        Text(
+                            text = name,
+                            fontSize = 15.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) accent.primary else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = accent.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    if (index < sims.lastIndex) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            thickness = 0.5.dp,
+                            modifier = Modifier.padding(horizontal = 20.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(horizontal = 12.dp)
+                ) {
+                    Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+

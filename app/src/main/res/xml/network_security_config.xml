@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Network Security Configuration for Proximity.
+
+    Cleartext HTTP is allowed ONLY for the Android captive-portal probe domain
+    (connectivitycheck.gstatic.com). This domain is intentionally served over
+    plain HTTP so that ISP/operator transparent proxies can intercept it to
+    redirect expired-plan users to their recharge portals (Walled Garden).
+
+    All other traffic — including the operator recharge portal itself, which
+    is served over HTTPS — is subject to the platform's default certificate
+    pinning and cleartext-blocking rules.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Allow cleartext for captive-portal probe and operator Walled Garden portals -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">connectivitycheck.gstatic.com</domain>
+        <domain includeSubdomains="true">jio.com</domain>
+        <domain includeSubdomains="true">airtel.in</domain>
+        <domain includeSubdomains="true">myvi.in</domain>
+        <domain includeSubdomains="true">bsnl.co.in</domain>
+        <domain includeSubdomains="true">bsnl.in</domain>
+        <domain includeSubdomains="true">mtnl.net.in</domain>
+    </domain-config>
+</network-security-config>

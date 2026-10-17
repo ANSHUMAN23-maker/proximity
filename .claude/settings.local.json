@@ -1,0 +1,57 @@
+{
+  "type": "command", "command": "${CLAUDE_PROJECT_DIR}/.idea/ai-terminal-tools/claude-hook.sh turn_start", "matcher": "Edit|Write|MultiEdit|NotebookEdit", "type": "command", "command": "${CLAUDE_PROJECT_DIR}/.idea/ai-terminal-tools/claude-hook.sh before_write", "matcher": "Edit|Write|MultiEdit|NotebookEdit", "type": "command", "command": "${CLAUDE_PROJECT_DIR}/.idea/ai-terminal-tools/claude-hook.sh file_changed", "type": "command", "command": "${CLAUDE_PROJECT_DIR}/.idea/ai-terminal-tools/claude-hook.sh turn_end", "type": "command", "command": "${CLAUDE_PROJECT_DIR}/.idea/ai-terminal-tools/claude-hook.sh turn_end_failed",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.idea/ai-terminal-tools/claude-hook.sh turn_start"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.idea/ai-terminal-tools/claude-hook.sh before_write"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.idea/ai-terminal-tools/claude-hook.sh file_changed"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.idea/ai-terminal-tools/claude-hook.sh turn_end"
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.idea/ai-terminal-tools/claude-hook.sh turn_end_failed"
+          }
+        ]
+      }
+    ]
+  }
+}

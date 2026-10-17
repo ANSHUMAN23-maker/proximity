@@ -1,0 +1,463 @@
+package com.proximity.app.managers
+
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.media.AudioManager
+import android.net.Uri
+import android.telecom.TelecomManager
+import android.telephony.PhoneStateListener
+import android.telephony.TelephonyManager
+import android.util.Log
+import android.widget.Toast
+import androidx.compose.runtime.mutableStateOf
+import androidx.core.content.ContextCompat
+import com.proximity.app.R
+import com.proximity.app.constants.AppConstants
+import com.proximity.app.payment.Upi123CallStringBuilder
+import com.proximity.app.payment.messageFor
+import java.util.concurrent.atomic.AtomicBoolean
+
+enum class CallType {
+    USSD, VOICE, UPI123, MANUAL_TRANSFER
+}
+
+class CallManager(private val context: Context) {
+
+    companion object {
+        private const val TAG = "CallManager"
+    }
+
+    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+
+    private var originalCallVolume: Int = 0
+    private var previousAudioMode: Int = AudioManager.MODE_NORMAL
+    private var isAudioMuted = false
+
+    // Call state tracking - thread-safe with proper synchronization
+    private var _isCallInProgress = mutableStateOf(false)
+
+    @Volatile
+    private var currentCallType: CallType? = null
+    private var onCallEndedCallback: ((CallType) -> Unit)? = null
+    private var onUssdSessionComplete: (() -> Unit)? = null
+    private var phoneStateListener: PhoneStateListener? = null
+    private val audioLock = Any()
+    private val callStateLock = Any()
+    private val callbackLock = Any()
+    private val listenerLock = Any()
+
+    private val isUSSDDialPending = AtomicBoolean(false)
+
+    private fun setCallEndedCallback(callback: ((CallType) -> Unit)?) {
+        synchronized(callbackLock) {
+            onCallEndedCallback = callback
+        }
+    }
+
+    private fun setUssdSessionCompleteCallback(callback: (() -> Unit)?) {
+        synchronized(callbackLock) {
+            onUssdSessionComplete = callback
+        }
+    }
+
+    private fun getCallEndedCallback(): ((CallType) -> Unit)? {
+        synchronized(callbackLock) {
+            return onCallEndedCallback
+        }
+    }
+
+    private fun getUssdSessionCompleteCallback(): (() -> Unit)? {
+        synchronized(callbackLock) {
+            return onUssdSessionComplete
+        }
+    }
+
+    private fun clearCallbacks() {
+        synchronized(callbackLock) {
+            onCallEndedCallback = null
+            onUssdSessionComplete = null
+        }
+    }
+
+    /**
+     * Initiates a call - simplified without cycle tracking
+     */
+    fun initiateCall(
+        context: Context,
+        phoneNumber: String,
+        callType: CallType,
+        onCallEnded: (CallType) -> Unit,
+        onUssdComplete: (() -> Unit)? = null
+    ) {
+        // ACTION_DIAL requires no special permission, so no permission guard needed
+
+        // Handle USSD calls using ACTION_DIAL
+        if (callType == CallType.USSD) {
+            handleUSSDCall(phoneNumber, onUssdComplete)
+            return
+        }
+
+        // Set up call tracking with thread safety
+        synchronized(callStateLock) {
+            currentCallType = callType
+            setCallEndedCallback(onCallEnded)
+            _isCallInProgress.value = true
+        }
+
+        // Create and register phone state listener for non-USSD calls
+        synchronized(listenerLock) {
+            phoneStateListener = createPhoneStateListener(onCallEnded)
+            telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE)
+        }
+
+        // Initiate the call via ACTION_DIAL (user confirms in system dialer)
+        val intent = Intent(Intent.ACTION_DIAL).apply {
+            data = Uri.parse("tel:$phoneNumber")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+
+        try {
+            context.startActivity(intent)
+            Log.d(TAG, "Call initiated: $callType")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initiate call", e)
+            synchronized(callStateLock) {
+                _isCallInProgress.value = false
+                currentCallType = null
+                clearCallbacks()
+            }
+            unregisterPhoneStateListener()
+        }
+    }
+
+    private fun unregisterPhoneStateListener() {
+        synchronized(listenerLock) {
+            try {
+                phoneStateListener?.let { telephonyManager.listen(it, PhoneStateListener.LISTEN_NONE) }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error unregistering phone state listener", e)
+            } finally {
+                phoneStateListener = null
+            }
+        }
+    }
+
+    /**
+     * Handle USSD calls using ACTION_DIAL
+     */
+    private fun handleUSSDCall(ussdCode: String, onUssdComplete: (() -> Unit)?) {
+        // Prevent double-dial at the call-manager level (atomic check-and-set)
+        if (!isUSSDDialPending.compareAndSet(false, true)) {
+            Log.w(TAG, "USSD dial already pending, ignoring duplicate")
+            return
+        }
+
+        // Set up USSD callback
+        setUssdSessionCompleteCallback(onUssdComplete)
+        _isCallInProgress.value = true
+        currentCallType = CallType.USSD
+
+        Log.d(TAG, "Starting USSD call: $ussdCode")
+
+        // Create and register phone state listener for USSD calls
+        synchronized(listenerLock) {
+            phoneStateListener = createPhoneStateListener { callType ->
+                if (callType == CallType.USSD) {
+                    isUSSDDialPending.set(false)
+                    synchronized(callStateLock) {
+                        _isCallInProgress.value = false
+                        currentCallType = null
+                        getUssdSessionCompleteCallback()?.invoke()
+                        clearCallbacks()
+                    }
+                }
+            }
+            telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE)
+        }
+
+        // Initiate the USSD call using ACTION_DIAL
+        // URL encode the USSD code to preserve special characters like #
+        val encodedUssdCode = Uri.encode(ussdCode)
+        val intent = Intent(Intent.ACTION_DIAL).apply {
+            data = Uri.parse("tel:$encodedUssdCode")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+
+        try {
+            context.startActivity(intent)
+            Log.d(TAG, "USSD call initiated: $ussdCode")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initiate USSD call", e)
+            isUSSDDialPending.set(false)
+            synchronized(callStateLock) {
+                _isCallInProgress.value = false
+                currentCallType = null
+                getUssdSessionCompleteCallback()?.invoke()
+                clearCallbacks()
+            }
+            unregisterPhoneStateListener()
+        }
+    }
+
+    /**
+     * Creates phone state listener for non-USSD calls
+     */
+    private fun createPhoneStateListener(onCallEnded: (CallType) -> Unit): PhoneStateListener {
+        return object : PhoneStateListener() {
+            @Deprecated("Deprecated in Java")
+            override fun onCallStateChanged(state: Int, phoneNumber: String?) {
+                val stateName = when (state) {
+                    TelephonyManager.CALL_STATE_IDLE -> "IDLE"
+                    TelephonyManager.CALL_STATE_RINGING -> "RINGING"
+                    TelephonyManager.CALL_STATE_OFFHOOK -> "OFFHOOK"
+                    else -> "UNKNOWN($state)"
+                }
+                Log.d(TAG, "Call State: $stateName")
+
+                when (state) {
+                    TelephonyManager.CALL_STATE_IDLE -> {
+                        if (_isCallInProgress.value) {
+                            // Call ended
+                            synchronized(callStateLock) {
+                                _isCallInProgress.value = false
+                                currentCallType?.let { callType ->
+                                    getCallEndedCallback()?.invoke(callType)
+                                }
+                                currentCallType = null
+                                clearCallbacks()
+                            }
+                        }
+                    }
+                    TelephonyManager.CALL_STATE_OFFHOOK -> {
+                        if (!_isCallInProgress.value) {
+                            _isCallInProgress.value = true
+                        }
+                    }
+                    TelephonyManager.CALL_STATE_RINGING -> {
+                        // Call is ringing
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Ends current call
+     */
+    fun endCall() {
+        synchronized(callStateLock) {
+            _isCallInProgress.value = false
+            currentCallType = null
+            clearCallbacks()
+        }
+
+        // Unregister phone state listener
+        synchronized(listenerLock) {
+            phoneStateListener?.let { listener ->
+                telephonyManager.listen(listener, PhoneStateListener.LISTEN_NONE)
+            }
+            phoneStateListener = null
+        }
+    }
+
+    fun isCallInProgress(): Boolean = _isCallInProgress.value
+
+    fun constructUPI123CallString(phoneNumber: String, amount: String): String {
+        return when (
+            val result = Upi123CallStringBuilder.build(
+                AppConstants.DEFAULT_UPI_SERVICE_NUMBER,
+                phoneNumber,
+                amount
+            )
+        ) {
+            is Upi123CallStringBuilder.Result.Valid -> result.callString
+            is Upi123CallStringBuilder.Result.Invalid ->
+                throw IllegalArgumentException(result.reason.name)
+        }
+    }
+
+    fun initiateUPI123Call(phoneNumber: String, amount: String): Boolean {
+        var callString: String? = null
+        return try {
+            val result = Upi123CallStringBuilder.build(
+                AppConstants.DEFAULT_UPI_SERVICE_NUMBER,
+                phoneNumber.orEmpty(),
+                amount.orEmpty()
+            )
+            callString = when (result) {
+                is Upi123CallStringBuilder.Result.Invalid -> {
+                    Log.e(TAG, "UPI123 call rejected: ${result.reason.name}")
+                    Toast.makeText(
+                        context,
+                        result.reason.messageFor(context),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return false
+                }
+                is Upi123CallStringBuilder.Result.Valid -> result.callString
+            }
+
+            // MANAGE_OWN_CALLS is a normal permission declared in the manifest — auto-granted at install.
+            // No runtime check needed. If placeCall() fails, fall back to ACTION_DIAL.
+
+            val telecomManager = context.getSystemService(Context.TELECOM_SERVICE)
+                as android.telecom.TelecomManager
+            val accountHandle = com.proximity.app.ProximityApplication.from(context)
+                ?.container?.phoneAccountManager?.handle
+            val extras = android.os.Bundle().apply {
+                if (accountHandle != null) {
+                    putParcelable(
+                        android.telecom.TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE,
+                        accountHandle
+                    )
+                }
+            }
+            telecomManager.placeCall(Uri.parse(callString), extras)
+            Log.d(TAG, "UPI123 call placed via TelecomManager")
+            true
+        } catch (e: SecurityException) {
+            Log.e(TAG, "TelecomManager.placeCall() failed, falling back to ACTION_DIAL", e)
+            callString ?: run {
+                Log.e(TAG, "No call string available for fallback")
+                Toast.makeText(context, R.string.error_call_failed, Toast.LENGTH_SHORT).show()
+                return false
+            }
+            // Fallback: open the system dialer with the UPI123 number pre-filled.
+            // User confirms the call manually — still completes the payment.
+            val fallbackIntent = Intent(Intent.ACTION_DIAL).apply {
+                data = Uri.parse("tel:${callString!!}")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            try {
+                context.startActivity(fallbackIntent)
+                Log.d(TAG, "UPI123 fallback dialer launched")
+                true
+            } catch (e2: Exception) {
+                Log.e(TAG, "Fallback dialer also failed", e2)
+                Toast.makeText(context, R.string.error_call_failed, Toast.LENGTH_SHORT).show()
+                false
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Unexpected error while initiating UPI123 call", e)
+            Toast.makeText(context, R.string.error_call_failed, Toast.LENGTH_SHORT).show()
+            false
+        }
+    }
+
+    fun unmuteCallAudio(): Boolean {
+        synchronized(audioLock) {
+            return try {
+                Log.d(TAG, "Restoring call audio")
+
+                audioManager.mode = previousAudioMode
+                if (audioManager.mode != previousAudioMode) {
+                    Log.w(TAG, "Failed to restore audio mode to $previousAudioMode")
+                }
+
+                audioManager.isMicrophoneMute = false
+
+                try {
+                    audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, originalCallVolume, 0)
+                    val currentCallVolume = audioManager.getStreamVolume(AudioManager.STREAM_VOICE_CALL)
+                    if (currentCallVolume != originalCallVolume) {
+                        Log.w(
+                            TAG,
+                            "Failed to restore call volume, expected: $originalCallVolume, actual: $currentCallVolume"
+                        )
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to restore call volume", e)
+                }
+
+                isAudioMuted = false
+                Log.d(TAG, "Call audio restored successfully")
+                true
+            } catch (e: SecurityException) {
+                Log.e(TAG, "Security exception while restoring audio", e)
+                Toast.makeText(context, R.string.error_audio_permission, Toast.LENGTH_SHORT).show()
+                false
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to restore call audio", e)
+                Toast.makeText(context, R.string.error_audio_restore_failed, Toast.LENGTH_SHORT).show()
+                false
+            }
+        }
+    }
+
+    fun terminateCall(): Boolean {
+        return try {
+            if (getCallState() == TelephonyManager.CALL_STATE_IDLE) {
+                Log.w(TAG, "No call in progress, cannot terminate")
+                return false
+            }
+            val hasPermission = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.ANSWER_PHONE_CALLS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!hasPermission) {
+                Log.w(TAG, "ANSWER_PHONE_CALLS not granted - cannot end call programmatically")
+                return false
+            }
+            val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
+
+            @Suppress("DEPRECATION")
+            val terminated = telecomManager.endCall()
+            Log.d(TAG, "TelecomManager.endCall() -> $terminated")
+            if (terminated) {
+                synchronized(callStateLock) {
+                    _isCallInProgress.value = false
+                    currentCallType = null
+                }
+            }
+            terminated
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Security exception while terminating call", e)
+            false
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to terminate call", e)
+            false
+        }
+    }
+
+    fun cleanup() {
+        synchronized(audioLock) {
+            try {
+                // Restore audio if it was muted
+                if (isAudioMuted) {
+                    unmuteCallAudio()
+                } else {
+                    Log.d(TAG, "Audio was not muted, no restoration needed")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during audio cleanup", e)
+            }
+        }
+
+        synchronized(callStateLock) {
+            try {
+                clearCallbacks()
+                currentCallType = null
+                _isCallInProgress.value = false
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during state cleanup", e)
+            }
+        }
+
+        synchronized(listenerLock) {
+            try {
+                phoneStateListener?.let { listener ->
+                    telephonyManager.listen(listener, PhoneStateListener.LISTEN_NONE)
+                }
+                phoneStateListener = null
+            } catch (e: Exception) {
+                Log.e(TAG, "Error unregistering phone state listener", e)
+            }
+        }
+
+        Log.d(TAG, "CallManager cleanup completed")
+    }
+
+    fun getCallState(): Int = telephonyManager.callState
+}
