@@ -358,6 +358,9 @@ class MainActivity : ComponentActivity() {
 
         val settingsRepository = app?.settingsRepository ?: SettingsRepository(applicationContext)
 
+        // Extract shortcut action from intent (set by SplashActivity)
+        val shortcutAction = intent.getStringExtra("shortcut_action")
+
         setContent {
             val savedSettings by settingsRepository.settingsFlow.collectAsState()
             CompositionLocalProvider(LocalProximityAccentTheme provides TealAccentTheme) {
@@ -373,7 +376,8 @@ class MainActivity : ComponentActivity() {
                             PermissionManager(this).overlayPermissionSettingsIntent()?.let {
                                 overlayPermissionLauncher.launch(it)
                             }
-                        }
+                        },
+                        shortcutAction = shortcutAction
                     )
                 }
             }
@@ -736,7 +740,8 @@ private fun RewardsSectionCardPreview() {
 fun MainScreen(
     onInitiateTransfer: (String, String) -> Unit,
     onQRScanClick: () -> Unit,
-    onRequestOverlayPermission: () -> Unit
+    onRequestOverlayPermission: () -> Unit,
+    shortcutAction: String? = null
 ) {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences(AppConstants.PREFS_NAME, Context.MODE_PRIVATE)

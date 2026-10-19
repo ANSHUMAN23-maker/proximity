@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Scan QR Code -->
+    <shortcut
+        android:shortcutId="scan_qr"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_scan_qr"
+        android:shortcutShortLabel="@string/shortcut_scan_qr"
+        android:shortcutLongLabel="@string/shortcut_scan_qr_long">
+        <intent
+            android:action="com.proximity.app.action.SCAN_QR"
+            android:targetPackage="com.proximity.app"
+            android:targetClass="com.proximity.app.ui.activities.SplashActivity" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <!-- Pay Contact -->
+    <shortcut
+        android:shortcutId="pay_contact"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_pay_contact"
+        android:shortcutShortLabel="@string/shortcut_pay_contact"
+        android:shortcutLongLabel="@string/shortcut_pay_contact_long">
+        <intent
+            android:action="com.proximity.app.action.PAY_CONTACT"
+            android:targetPackage="com.proximity.app"
+            android:targetClass="com.proximity.app.ui.activities.SplashActivity" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <!-- Recharge -->
+    <shortcut
+        android:shortcutId="recharge"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_recharge"
+        android:shortcutShortLabel="@string/shortcut_recharge"
+        android:shortcutLongLabel="@string/shortcut_recharge_long">
+        <intent
+            android:action="com.proximity.app.action.RECHARGE"
+            android:targetPackage="com.proximity.app"
+            android:targetClass="com.proximity.app.ui.activities.SplashActivity" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <!-- Transaction History -->
+    <shortcut
+        android:shortcutId="transactions"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_transactions"
+        android:shortcutShortLabel="@string/shortcut_transactions"
+        android:shortcutLongLabel="@string/shortcut_transactions_long">
+        <intent
+            android:action="com.proximity.app.action.VIEW_TRANSACTIONS"
+            android:targetPackage="com.proximity.app"
+            android:targetClass="com.proximity.app.ui.activities.SplashActivity" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <!-- Setup -->
+    <shortcut
+        android:shortcutId="setup"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_setup"
+        android:shortcutShortLabel="@string/shortcut_setup"
+        android:shortcutLongLabel="@string/shortcut_setup_long">
+        <intent
+            android:action="com.proximity.app.action.SETUP"
+            android:targetPackage="com.proximity.app"
+            android:targetClass="com.proximity.app.ui.activities.SplashActivity" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+</shortcuts>

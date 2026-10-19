@@ -305,4 +305,16 @@
     <string name="recharge_success_body">If your payment succeeded, return and try your UPI payment again.</string>
     <string name="recharge_action_retry">Retry</string>
     <string name="recharge_action_browser">Open in Chrome</string>
+
+    <!-- App Shortcuts -->
+    <string name="shortcut_scan_qr">Scan QR</string>
+    <string name="shortcut_scan_qr_long">Scan a QR code to pay</string>
+    <string name="shortcut_pay_contact">Pay Contact</string>
+    <string name="shortcut_pay_contact_long">Pay a contact via UPI</string>
+    <string name="shortcut_recharge">Recharge</string>
+    <string name="shortcut_recharge_long">Recharge your mobile plan</string>
+    <string name="shortcut_transactions">Transactions</string>
+    <string name="shortcut_transactions_long">View payment history</string>
+    <string name="shortcut_setup">Setup</string>
+    <string name="shortcut_setup_long">Complete app setup</string>
 </resources>

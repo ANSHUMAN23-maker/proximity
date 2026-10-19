@@ -92,6 +92,55 @@ Still Working On it. Haven't signed the app bundle and made an .aab so far
 - **No Secrets in Code**: API keys and credentials must not be committed — use `local.properties` and `keystore.properties` (both gitignored)
 - **Private Repository**: This repository is private on GitHub
 
-##  License
+##  ⚖️ License & Legal Notice
 
-None So far :3 . All modules and libraries used are licensed with Apache 2.0 License
+**All rights reserved.**
+
+Copyright © 2026 Proximity. All rights reserved.
+
+This software and associated documentation files (the "Software") are the proprietary property of Proximity. **No license is granted** to use, copy, modify, merge, publish, distribute, sublicense, or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, **except as expressly permitted in writing by the copyright holder**.
+
+###  Forking & Copying Restrictions
+
+You may **not**:
+- Fork this repository on GitHub or any other platform
+- Copy, clone, or duplicate this project for your own use
+- Create derivative works based on this codebase
+- Use this code in your own applications, commercial or otherwise
+- Publish this code under your own name or organization
+
+This project is **private and proprietary**. If you received a copy of this code without authorization, you do not have permission to use it.
+
+###  Third-Party Licenses
+
+While this application itself is proprietary, it depends on open-source libraries (e.g., Jetpack Compose, Room, SQLCipher, kotlinx.coroutines). Those libraries remain licensed under their respective terms (primarily Apache 2.0), but **this does not grant any rights to the Proximity application code itself**.
+
+---
+
+##  ⚠️ Disclaimer
+
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+###  Financial Services Disclaimer
+
+Proximity facilitates access to UPI-based payment systems (USSD *99#, UPI123Pay) and mobile recharge portals. **Proximity is not a bank, wallet, or payment processor.** It does not hold, move, or have access to your money. All transactions are authorized and processed directly by you, your bank, NPCI, and your telecom operator.
+
+- The developers make no warranty that USSD, UPI123Pay, or Walled Garden recharge services will be available or functional
+- Transaction disputes are between the User and their respective bank, NPCI, or telecom operator
+- Users retain all rights available under applicable consumer protection laws
+
+---
+
+##  📄 Full Terms
+
+For the complete Terms of Service, Privacy Policy, and Disclaimer, see [`TermsActivity`](app/src/main/java/com/proximity/app/ui/activities/TermsActivity.kt) within the app.
+
+---
+
+##  Contact
+
+For licensing inquiries or permission requests, contact the repository owner.
+
+---
+
+_All modules and libraries used internally are licensed with Apache 2.0 License where applicable. This does not affect the proprietary status of the Proximity application code._
