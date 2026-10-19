@@ -1,6 +1,6 @@
 # Proximity — Make UPI Payments OFFLINE
 
-> 🚨 **PROPRIETARY AND CONFIDENTIAL — ALL RIGHTS RESERVED**
+>  **PROPRIETARY AND CONFIDENTIAL — ALL RIGHTS RESERVED**
 > 
 > Copyright © 2026 Proximity. All rights reserved.
 > 
@@ -102,7 +102,7 @@ Still Working On it. Haven't signed the app bundle and made an .aab so far
 - **Repository Visibility**: Public for viewing only — does NOT imply any license to use or copy this Software
 - **Proprietary Status**: All rights reserved. See [LICENSE](LICENSE) for full terms
 
-##  ⚖️ License & Legal Notice
+##   License & Legal Notice
 
 **All rights reserved.**
 
@@ -127,7 +127,7 @@ While this application itself is proprietary, it depends on open-source librarie
 
 ---
 
-##  ⚠️ Disclaimer
+##   Disclaimer
 
 THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
@@ -141,7 +141,7 @@ Proximity facilitates access to UPI-based payment systems (USSD *99#, UPI123Pay)
 
 ---
 
-##  📄 Full Terms
+##   Full Terms
 
 For the complete Terms of Service, Privacy Policy, and Disclaimer, see [`TermsActivity`](app/src/main/java/com/proximity/app/ui/activities/TermsActivity.kt) within the app.
 
