@@ -1,0 +1,68 @@
+PROXIMITY — PROPRIETARY LICENSE
+
+Copyright © 2026 Proximity. All rights reserved.
+
+This software and associated documentation files (the "Software") are the
+proprietary property of Proximity ("Licensor").
+
+NO LICENSE IS GRANTED.
+
+You may NOT:
+
+1. Fork this repository on GitHub, GitLab, Bitbucket, or any other platform.
+2. Clone, copy, download, or otherwise obtain a local copy of this Software
+   except for personal, non-redistributable evaluation with express written
+   permission from the Licensor.
+3. Modify, adapt, translate, or create derivative works based on this Software.
+4. Merge this Software into other software or combine it with other code.
+5. Publish, distribute, sublicense, sell, rent, lease, or otherwise transfer
+   this Software or any portion of it to any third party.
+6. Use this Software, in whole or in part, in your own applications, products,
+   or services, whether commercial, non-commercial, open source, or proprietary.
+7. Publish this code under your own name, organization, or brand.
+8. Reverse engineer, decompile, disassemble, or attempt to derive source code
+   from compiled binaries of this Software.
+9. Remove, obscure, or alter any copyright, trademark, or proprietary notice
+   contained in this Software.
+
+This repository may be public for viewing purposes only. Public visibility does
+NOT imply any license, permission, or right to use, copy, or distribute this
+Software.
+
+THIRD-PARTY COMPONENTS:
+
+This application depends on open-source libraries (including but not limited to
+Jetpack Compose, Room, SQLCipher, kotlinx.coroutines, and Lottie). Those third-
+party components remain licensed under their respective open-source licenses
+(primarily Apache 2.0). This does NOT grant any rights to the Proximity
+application code itself. The Proximity application code is and remains
+proprietary and closed source.
+
+DISCLAIMER OF WARRANTY:
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM,
+OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+FINANCIAL SERVICES DISCLAIMER:
+
+Proximity facilitates access to UPI-based payment systems (USSD *99#,
+UPI123Pay) and mobile recharge portals. Proximity is NOT a bank, wallet, or
+payment processor. It does not hold, move, or have access to your money. All
+transactions are authorized and processed directly by you, your bank, NPCI, and
+your telecom operator.
+
+The developers make no warranty that USSD, UPI123Pay, or Walled Garden recharge
+services will be available or functional. Transaction disputes are between the
+User and their respective bank, NPCI, or telecom operator.
+
+GOVERNING LAW:
+
+This license is governed by the laws of India, without regard to conflict of
+law principles.
+
+For licensing inquiries or permission requests, contact the repository owner.
