@@ -1,5 +1,14 @@
 # Proximity — Make UPI Payments OFFLINE
 
+> 🚨 **PROPRIETARY AND CONFIDENTIAL — ALL RIGHTS RESERVED**
+> 
+> Copyright © 2026 Proximity. All rights reserved.
+> 
+> This software is proprietary and closed source. **No license is granted** to
+> fork, copy, clone, modify, distribute, or use this code in any form. Public
+> visibility of this repository does **not** imply any permission to use,
+> copy, or redistribute this Software. See [LICENSE](LICENSE) for full terms.
+
 Proximity is an Android payment application that enables UPI transactions without requiring an active internet connection. It uses USSD (*99#) and TelecomManager-based call routing to process payments through the phone's native dialer and SMS infrastructure.
 
 ##  Features
@@ -90,7 +99,8 @@ Still Working On it. Haven't signed the app bundle and made an .aab so far
 
 - **Encrypted Database**: Room database uses SQLCipher for AES-256 encryption
 - **No Secrets in Code**: API keys and credentials must not be committed — use `local.properties` and `keystore.properties` (both gitignored)
-- **Private Repository**: This repository is private on GitHub
+- **Repository Visibility**: Public for viewing only — does NOT imply any license to use or copy this Software
+- **Proprietary Status**: All rights reserved. See [LICENSE](LICENSE) for full terms
 
 ##  ⚖️ License & Legal Notice
 

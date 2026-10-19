@@ -1,5 +1,6 @@
-// SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Proximity
+// Copyright © 2026 Proximity. All rights reserved.
+// Proprietary and confidential — No license granted.
+// See LICENSE file for full terms.
 
 package com.proximity.app.ui.components
 
