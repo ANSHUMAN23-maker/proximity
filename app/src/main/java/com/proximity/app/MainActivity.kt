@@ -124,6 +124,8 @@ import com.proximity.app.ui.components.AnimatedContourBackground
 import com.proximity.app.ui.components.CurrencyText
 import com.proximity.app.ui.components.pressScale
 import com.proximity.app.ui.dialogs.ContactPickerDialog
+import com.proximity.app.network.WalledGardenResult
+import com.proximity.app.network.WalledGardenViewModel
 import com.proximity.app.ui.theme.TealAccentTheme
 import com.proximity.app.ui.theme.ProximityDarkGray
 import com.proximity.app.ui.theme.ProximityLightGray
@@ -134,6 +136,7 @@ import com.proximity.app.ui.theme.ProximityTextLightGray
 import com.proximity.app.ui.theme.ProximityTextPale
 import com.proximity.app.ui.theme.ProximityTheme
 import com.proximity.app.ui.theme.LocalProximityAccentTheme
+import com.proximity.app.ui.components.WalledGardenBanner
 import com.proximity.app.utils.CurrencyFormat
 import com.proximity.app.utils.findComponentActivity
 import com.proximity.app.viewmodel.MainUiEvent
@@ -850,7 +853,22 @@ fun MainScreen(
 
     // ── Walled Garden Detection ───────────────────────────────────────────────
     val app = remember { com.proximity.app.ProximityApplication.from(context) }
-    // Walled Garden Detection removed
+    val walledGardenViewModel: WalledGardenViewModel = viewModel(
+        factory = WalledGardenViewModel.Factory(app!!.container.walledGardenDetector)
+    )
+
+    var walledGardenResult by remember { mutableStateOf<WalledGardenResult?>(null) }
+    LaunchedEffect(walledGardenViewModel.state) {
+        walledGardenResult = walledGardenViewModel.state.value
+    }
+
+    // Force a fresh check when entering the home screen
+    LaunchedEffect(Unit) {
+        walledGardenViewModel.check(force = true)
+    }
+
+    val operatorRaw = app.container.settingsRepository.settingsFlow.value.selectedOperator
+    val operatorName = if (operatorRaw.isBlank() || operatorRaw == "unknown") "your operator" else operatorRaw.replaceFirstChar { it.uppercaseChar() }
 
 
     // Safety: never leave the QR button stuck in "Opening..."
@@ -884,7 +902,18 @@ fun MainScreen(
                             .verticalScroll(rememberScrollState())
                             .padding(bottom = innerPadding.calculateBottomPadding() + 16.dp)
                     ) {
-                                            // Walled Garden Banner removed
+                                            WalledGardenBanner(
+                                                result = walledGardenResult ?: WalledGardenResult.Connected,
+                                                operatorName = operatorName,
+                                                onOpenSettings = {
+                                                    context.startActivity(
+                                                        Intent(
+                                                            android.provider.Settings.ACTION_DATA_ROAMING_SETTINGS
+                                                        )
+                                                    )
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
 
 
                                             Spacer(modifier = Modifier.height(24.dp))
@@ -967,20 +996,32 @@ fun MainScreen(
                         }
                     },
                     onRechargeClick = {
-                        val operatorRaw = app!!.container.settingsRepository.settingsFlow.value.selectedOperator
-                        val operatorName = if (operatorRaw.isBlank() || operatorRaw == "unknown") "your operator" else operatorRaw.replaceFirstChar { it.uppercaseChar() }
-                        val domain = when(operatorRaw.lowercase()) {
-                            "jio" -> "jio.com"
-                            "airtel" -> "airtel.in"
-                            "vi", "vodafone" -> "myvi.in"
-                            "bsnl" -> "bsnl.co.in"
-                            else -> "jio.com"
+                        val result = walledGardenResult
+
+                        val portalUrl = when (result) {
+                            is WalledGardenResult.Detected -> result.portalUrl
+                            else -> {
+                                val domain = when (operatorRaw.lowercase()) {
+                                    "jio" -> "jio.com"
+                                    "airtel" -> "airtel.in"
+                                    "vi", "vodafone" -> "myvi.in"
+                                    "bsnl" -> "bsnl.co.in"
+                                    else -> "jio.com"
+                                }
+                                "https://www.$domain"
+                            }
                         }
+
+                        val network = when (result) {
+                            is WalledGardenResult.Detected -> result.network
+                            else -> null
+                        }
+
                         val intent = com.proximity.app.ui.activities.RechargeWebActivity.buildIntent(
                             context,
-                            "https://www.$domain",
+                            portalUrl,
                             operatorName,
-                            null
+                            network
                         )
                         context.startActivity(intent)
                     },

@@ -4,7 +4,9 @@ import com.proximity.app.ui.components.*
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
 import android.net.Network
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.webkit.SslErrorHandler
@@ -12,6 +14,8 @@ import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.AlertDialog
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.activity.compose.setContent
@@ -73,12 +77,18 @@ class RechargeWebActivity : ComponentActivity() {
             }
         }
 
-        // NOTE: bindProcessToNetwork() binds the entire process, which would
-        // break Wi-Fi for other components (background sync, other WebViews)
-        // on dual-network devices. WebView does not expose a per-instance
-        // network binding API, so we use default routing here. The operator
-        // portal URL is loaded over whatever network the system selects.
-        if (network == null) {
+        // Bind to the cellular network so the WebView reaches the operator's
+        // captive portal instead of being routed over Wi-Fi (which may be off).
+        if (network != null) {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                cm.bindProcessToNetwork(network)
+            } else {
+                @Suppress("DEPRECATION")
+                android.net.ConnectivityManager.setProcessDefaultNetwork(network)
+            }
+            Log.d(TAG, "Bound process to cellular network for portal access")
+        } else {
             Log.w(TAG, "No cellular network available — WebView will use default routing")
         }
 
@@ -282,6 +292,16 @@ private fun RechargeWebScreen(
                                 )
                             ) {
                                 Text(androidx.compose.ui.res.stringResource(R.string.recharge_action_retry))
+                            }
+
+                            androidx.compose.material3.TextButton(
+                                onClick = {
+                                    isError = false
+                                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(portalUrl))
+                                    context.startActivity(browserIntent)
+                                }
+                            ) {
+                                Text(androidx.compose.ui.res.stringResource(R.string.recharge_action_browser))
                             }
                         }
                     }

@@ -1,28 +1,23 @@
-# Proximity — UPI Payment App (Offline-First)
+# Proximity — Make UPI Payments OFFLINE
 
 Proximity is an Android payment application that enables UPI transactions without requiring an active internet connection. It uses USSD (*99#) and TelecomManager-based call routing to process payments through the phone's native dialer and SMS infrastructure.
 
-## 🚀 Features
+##  Features
 
 | Feature | Description |
 |---------|-------------|
-| **USSD Payments (*99#)** | Initiate UPI payments via USSD codes through the system dialer |
 | **QR Code Scanning** | Scan UPI QR codes to auto-fill payment details |
-| **UPI123 Payments** | Manual UPI payments routed through `TelecomManager.placeCall()` (invisible dialer) |
-| **Pay Contact** | Send payments to saved contacts |
-| **Transaction History** | View past payments with status, amount, and reference |
-| **SMS Auto-Detection** | Automatically detects and confirms incoming bank SMS during payment windows |
-| **Accessibility Support** | Reads USSD dialog text during QR payments for confirmation |
-| **Dark Mode** | Theme toggle for light/dark appearance |
-| **Permission Management** | Granular control over phone, camera, SMS, contacts, and notifications |
+| **Pay Contact** | Send payments to saved contacts or phone numbers |
+| **Switch Themes** | Theme toggle for light/dark appearance |
+| **Recharge** | Go ahead and recharge your mobile plan even when it is exhausted |
 
-## 🔒 Play Store Compliance
+##  Play Store Compliance
 
 - **No `CALL_PHONE` permission**: Uses `Intent.ACTION_DIAL` instead of `Intent.ACTION_CALL`, eliminating the need for the high-risk `CALL_PHONE` runtime permission
 - **`MANAGE_OWN_CALLS` only**: UPI123 calls use `TelecomManager.placeCall()` which requires only the normal `MANAGE_OWN_CALLS` permission (auto-granted at install)
 - **Reduced permission prompts**: Fresh installs no longer trigger a `CALL_PHONE` permission dialog
 
-## ♿ Accessibility Feature
+##  Accessibility Feature
 
 The app includes an optional accessibility service that reads USSD dialog boxes during QR code payment flows:
 
@@ -31,7 +26,7 @@ The app includes an optional accessibility service that reads USSD dialog boxes 
 - **User-enabled**: Must be manually enabled in **Android Settings > Accessibility > Proximity**
 - **Payment-scoped only**: Activates only when a payment session is in progress
 
-## 🛠 Technical Stack
+##  Technical Stack
 
 | Component | Technology |
 |-----------|------------|
@@ -44,7 +39,7 @@ The app includes an optional accessibility service that reads USSD dialog boxes 
 | Min SDK | 29 |
 | Target SDK | 35 |
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 app/src/main/java/com/proximity/app/
@@ -64,7 +59,7 @@ app/src/main/java/com/proximity/app/
 └── MainActivity.kt          # Home screen entry point
 ```
 
-## 📋 Permissions
+##  Permissions
 
 | Permission | Type | Purpose |
 |------------|------|---------|
@@ -81,37 +76,22 @@ app/src/main/java/com/proximity/app/
 
 **Removed**: `CALL_PHONE` (no longer required — uses `ACTION_DIAL`)
 
-## 📦 Setup & Build
+##  Setup & Build
 
 ### Prerequisites
 - Android Studio (latest stable)
 - JDK 17+
 - Android SDK 35
 
-### Build
-```bash
-# Clone the repository
-git clone https://github.com/ANSHUMAN23-maker/proximity.git
-cd proximity
-
-# Open in Android Studio and sync Gradle
-# Build: ./gradlew assembleDebug
-# Run: ./gradlew installDebug
-```
-
 ### Signing
-Release builds require a signing keystore. Copy `keystore.properties.example` to `keystore.properties` and fill in your values. These files are gitignored for security.
+Still Working On it. Haven't signed the app bundle and made an .aab so far
 
-## 🔐 Security
+##  Security
 
 - **Encrypted Database**: Room database uses SQLCipher for AES-256 encryption
 - **No Secrets in Code**: API keys and credentials must not be committed — use `local.properties` and `keystore.properties` (both gitignored)
 - **Private Repository**: This repository is private on GitHub
 
-## 📄 License
+##  License
 
-Copyright 2026 Proximity. All rights reserved.
-
-## 🤝 Contributing
-
-This is a private project. If you'd like to contribute, please contact the repository owner to be added as a collaborator.
+None So far :3 . All modules and libraries used are licensed with Apache 2.0 License
