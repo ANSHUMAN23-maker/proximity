@@ -1,6 +1,5 @@
-// Copyright © 2026 Proximity. All rights reserved.
-// Proprietary and confidential — No license granted.
-// See LICENSE file for full terms.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Proximity
 
 package com.proximity.app.ui.activities
 
@@ -69,23 +68,10 @@ import kotlinx.coroutines.withContext
 
 class SplashActivity : ComponentActivity() {
 
-    companion object {
-        internal const val SHORTCUT_ACTION_SCAN_QR = "com.proximity.app.action.SCAN_QR"
-        internal const val SHORTCUT_ACTION_PAY_CONTACT = "com.proximity.app.action.PAY_CONTACT"
-        internal const val SHORTCUT_ACTION_RECHARGE = "com.proximity.app.action.RECHARGE"
-        internal const val SHORTCUT_ACTION_TRANSACTIONS = "com.proximity.app.action.VIEW_TRANSACTIONS"
-        internal const val SHORTCUT_ACTION_SETUP = "com.proximity.app.action.SETUP"
-    }
-
-    private var pendingShortcutAction: String? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
-
-        // Capture shortcut intent action for post-splash routing
-        pendingShortcutAction = intent.action
 
         val prefs = getSharedPreferences(AppConstants.PREFS_NAME, Context.MODE_PRIVATE)
         val isDarkMode = prefs.getBoolean("dark_mode_enabled", false)
@@ -127,39 +113,14 @@ class SplashActivity : ComponentActivity() {
         val setupCompleted = prefs.getBoolean(AppConstants.KEY_SETUP_COMPLETED, false)
         val testCompleted = prefs.getBoolean(AppConstants.KEY_TEST_COMPLETED, false)
 
-        // If setup is not complete, always route to SetupActivity first
-        if (!setupCompleted) {
-            startActivity(Intent(this, SetupActivity::class.java))
-            finish()
-            overrideTransition()
-            return
-        }
-
-        // If setup is complete but shortcut targets a specific screen, route there
-        val targetIntent = when (pendingShortcutAction) {
-            SHORTCUT_ACTION_SCAN_QR -> Intent(this, MainActivity::class.java).apply {
-                putExtra("shortcut_action", SHORTCUT_ACTION_SCAN_QR)
-            }
-            SHORTCUT_ACTION_PAY_CONTACT -> Intent(this, MainActivity::class.java).apply {
-                putExtra("shortcut_action", SHORTCUT_ACTION_PAY_CONTACT)
-            }
-            SHORTCUT_ACTION_RECHARGE -> Intent(this, MainActivity::class.java).apply {
-                putExtra("shortcut_action", SHORTCUT_ACTION_RECHARGE)
-            }
-            SHORTCUT_ACTION_TRANSACTIONS -> Intent(this, com.proximity.app.ui.activities.TransactionHistoryActivity::class.java)
-            SHORTCUT_ACTION_SETUP -> Intent(this, SetupActivity::class.java)
-            else -> when {
-                !testCompleted -> Intent(this, TestConfigurationActivity::class.java)
-                else -> Intent(this, MainActivity::class.java)
-            }
+        val targetIntent = when {
+            !setupCompleted -> Intent(this, SetupActivity::class.java)
+            !testCompleted -> Intent(this, TestConfigurationActivity::class.java)
+            else -> Intent(this, MainActivity::class.java)
         }
 
         startActivity(targetIntent)
         finish()
-        overrideTransition()
-    }
-
-    private fun overrideTransition() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             overrideActivityTransition(OVERRIDE_TRANSITION_CLOSE, 0, 0)
         } else {

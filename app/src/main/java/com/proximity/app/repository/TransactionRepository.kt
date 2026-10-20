@@ -8,13 +8,10 @@ import com.proximity.app.data.TransactionStatus
 import com.proximity.app.payment.sms.SimpleTransaction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.runBlocking
 class TransactionRepository private constructor(context: Context) :
     com.proximity.app.payment.PaymentTransactionStore {
 
-    private val transactionDao: TransactionDao = runBlocking {
-        AppDatabase.getDatabaseSafe(context).transactionDao()
-    }
+    private val transactionDao: TransactionDao = AppDatabase.getDatabase(context).transactionDao()
 
     companion object {
         @Volatile

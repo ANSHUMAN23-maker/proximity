@@ -78,7 +78,6 @@ class SettingsActivity : ComponentActivity() {
                     SettingsScreen(
                         onBackPressed = { finish() },
                         settingsRepository = settingsRepository,
-                        selectedOperator = savedSettings.selectedOperator,
                         onRequestPermissions = { permissions ->
                             permissionLauncher.launch(permissions)
                         },
@@ -151,7 +150,9 @@ class SettingsViewModel : androidx.lifecycle.ViewModel() {
     fun refreshPermissions(context: Context) {
         val perms = mapOf(
             "phone" to (
-                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) ==
+                ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) ==
+                    PackageManager.PERMISSION_GRANTED &&
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) ==
                     PackageManager.PERMISSION_GRANTED
                 ),
             "camera" to (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
@@ -196,7 +197,6 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel(),
     onBackPressed: () -> Unit,
     settingsRepository: SettingsRepository? = null,
-    selectedOperator: String = "unknown",
     onRequestPermissions: (Array<String>) -> Unit = {},
     refreshTrigger: MutableIntState = mutableIntStateOf(0)
 ) {
@@ -216,8 +216,11 @@ fun SettingsScreen(
         viewModel.refreshPermissions(context)
     }
 
-    // Track primary SIM locally (starts from parameter, updated when user picks)
-    var primarySimId by remember { mutableStateOf(selectedOperator) }
+    // Get primary SIM name from shared prefs (reactive)
+    var primarySimId by remember {
+        val prefs = context.getSharedPreferences("ProximityPrefs", Context.MODE_PRIVATE)
+        mutableStateOf(prefs.getString("selected_primary_sim", "") ?: "")
+    }
     val primarySim = when (primarySimId) {
         "jio" -> "Jio"
         "airtel" -> "Airtel"
@@ -319,6 +322,7 @@ fun SettingsScreen(
                             onRequest = {
                                 onRequestPermissions(
                                     arrayOf(
+                                        Manifest.permission.CALL_PHONE,
                                         Manifest.permission.READ_PHONE_STATE
                                     )
                                 )
@@ -417,9 +421,6 @@ fun SettingsScreen(
                 primarySimId = simId
                 context.getSharedPreferences("ProximityPrefs", Context.MODE_PRIVATE)
                     .edit().putString("selected_primary_sim", simId).apply()
-                settingsRepository?.saveSettings(
-                    settingsRepository.settingsFlow.value.copy(selectedOperator = simId)
-                )
                 showSimPicker = false
             },
             onDismiss = { showSimPicker = false }

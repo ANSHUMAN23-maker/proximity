@@ -14,14 +14,7 @@ class SetupHelper(
         fun isPrimarySimUssdCapable(context: Context): Boolean {
             val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             val primarySim = prefs.getString("selected_primary_sim", "") ?: ""
-            if (primarySim.isEmpty()) return false
-
-            // Jio does not support *99# USSD payments for any plan.
-            // Hard-block Jio so users don't waste time attempting a test
-            // that will always fail.
-            if (primarySim.equals("jio", ignoreCase = true)) return false
-
-            return true
+            return primarySim != "jio"
         }
 
         fun hasUserReportedUssdNotWorking(context: Context): Boolean {
@@ -46,13 +39,8 @@ class SetupHelper(
         }
         fun getScanToPayBlockedMessage(context: Context): String? {
             if (isScanToPayUssdAvailable(context)) return null
-            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            val primarySim = prefs.getString("selected_primary_sim", "") ?: ""
-            if (primarySim.equals("jio", ignoreCase = true)) {
-                return "Scan to pay is not available - Jio does not support *99# USSD payments"
-            }
             if (!isPrimarySimUssdCapable(context)) {
-                return "Scan to pay is not available - No primary SIM selected"
+                return "Scan to pay is not available - Jio does not support *99# USSD payments"
             }
             return "Scan to pay is not available - USSD does not work for you on this device, so this feature can't be used."
         }
@@ -73,8 +61,21 @@ class SetupHelper(
         val selectedSecondarySim: String,
         val disclaimerAccepted: Boolean
     )
-    fun getBanks(): List<Pair<String, String>> =
-        com.proximity.app.constants.BankRegistry.allPairs()
+    fun getBanks(): List<Pair<String, String>> {
+        return listOf(
+            "sbi" to "State Bank of India",
+            "hdfc" to "HDFC Bank",
+            "icici" to "ICICI Bank",
+            "axis" to "Axis Bank",
+            "kotak" to "Kotak Mahindra Bank",
+            "pnb" to "Punjab National Bank",
+            "bob" to "Bank of Baroda",
+            "yes" to "Yes Bank",
+            "idbi" to "IDBI Bank",
+            "canara" to "Canara Bank",
+            "union" to "Union Bank of India"
+        )
+    }
     fun getSimCarriers(): List<Pair<String, String>> {
         return listOf(
             "jio" to "Jio",

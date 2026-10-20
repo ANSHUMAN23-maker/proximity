@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.util.Log
+import com.proximity.app.ProximityApplication
 import com.proximity.app.R
 import com.proximity.app.SetupActivity
 import com.proximity.app.TestConfigurationActivity

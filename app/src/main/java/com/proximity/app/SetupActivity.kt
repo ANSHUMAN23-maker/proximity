@@ -729,7 +729,7 @@ fun PermissionsSection(
         // Core Permissions Card
         PermissionCard(
             title = "Core App Permissions",
-            description = "Allows Proximity to open the dialer with USSD codes pre-filled (you confirm the call), send payment notifications, verify bank SMS, and let you pick contacts.",
+            description = "Allows Proximity to make calls (USSD), send payment notifications, verify bank SMS, and let you pick contacts.",
             icon = Icons.Filled.Phone,
             isGranted = coreGranted,
             onClick = {

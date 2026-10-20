@@ -93,8 +93,14 @@ class PaymentSessionManager(
         val now = clock()
         val deadlineAt = now + verificationDeadlineMs
 
-        // Insert new PENDING row FIRST, then delete superseded session.
-        // This prevents orphaned payment attempts if insertPending fails.
+        if (supersededTxnId != null) {
+            val previousInsert = pendingInsertJob
+            scope.launch {
+                previousInsert?.join()
+                store.deletePending(supersededTxnId)
+            }
+        }
+
         pendingInsertJob = scope.launch {
             runCatching { store.deleteStalePending(now) }
             store.insertPending(
@@ -113,12 +119,6 @@ class PaymentSessionManager(
                 )
             )
             Log.d(TAG, "PENDING row recorded for session")
-
-            // Now safe to delete the superseded session's PENDING row.
-            if (supersededTxnId != null) {
-                runCatching { store.deletePending(supersededTxnId) }
-                Log.d(TAG, "Superseded PENDING row $supersededTxnId deleted")
-            }
         }
 
         collectJob = scope.launch {
@@ -235,21 +235,6 @@ class PaymentSessionManager(
             Log.d(TAG, "Session row confirmed as $newStatus (rows=$updated)")
         }
         return txnId
-    }
-
-    /**
-     * Called by [PaymentAccessibilityService] when USSD dialog text is scraped
-     * during a QR payment flow. Confirms the payment in the session manager.
-     */
-    fun onUssdScraped(parsed: SimpleTransaction) {
-        synchronized(sessionLock) {
-            val current = _paymentState.value
-            if (!current.isInProgress()) return
-        }
-
-        // Reuse the same confirmation logic as SMS-based confirmation
-        onSmsConfirmed(parsed)
-        Log.d(TAG, "USSD scraped and confirmed: ${parsed.transactionId}")
     }
 
     fun acknowledgeResult() {

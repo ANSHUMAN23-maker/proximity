@@ -1,6 +1,5 @@
-// Copyright © 2026 Proximity. All rights reserved.
-// Proprietary and confidential — No license granted.
-// See LICENSE file for full terms.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Proximity
 //
 // Home screen: the entry point to both payment rails (Scan QR and Pay
 // Contact), recent payments, and settings. UI only â€” the transfer
@@ -108,25 +107,19 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.proximity.app.constants.AppConstants
 import com.proximity.app.constants.PermissionConstants
-import com.proximity.app.ProximityApplication
 import com.proximity.app.data.PaymentDetails
 import com.proximity.app.data.PaymentStatus
 import com.proximity.app.data.TestResultsManager
 import com.proximity.app.helpers.MainActivityHelper
 import com.proximity.app.managers.PermissionManager
-import com.proximity.app.payment.PaymentSessionManager
 import com.proximity.app.payment.Upi123CallStringBuilder
 import com.proximity.app.payment.messageFor
-import com.proximity.app.states.PaymentState
-import com.proximity.app.ui.activities.PaymentResultActivity
 import com.proximity.app.ui.activities.SettingsActivity
 import com.proximity.app.ui.activities.TransactionHistoryActivity
 import com.proximity.app.ui.components.AnimatedContourBackground
 import com.proximity.app.ui.components.CurrencyText
 import com.proximity.app.ui.components.pressScale
 import com.proximity.app.ui.dialogs.ContactPickerDialog
-import com.proximity.app.network.WalledGardenResult
-import com.proximity.app.network.WalledGardenViewModel
 import com.proximity.app.ui.theme.TealAccentTheme
 import com.proximity.app.ui.theme.ProximityDarkGray
 import com.proximity.app.ui.theme.ProximityLightGray
@@ -137,7 +130,6 @@ import com.proximity.app.ui.theme.ProximityTextLightGray
 import com.proximity.app.ui.theme.ProximityTextPale
 import com.proximity.app.ui.theme.ProximityTheme
 import com.proximity.app.ui.theme.LocalProximityAccentTheme
-import com.proximity.app.ui.components.WalledGardenBanner
 import com.proximity.app.utils.CurrencyFormat
 import com.proximity.app.utils.findComponentActivity
 import com.proximity.app.viewmodel.MainUiEvent
@@ -302,65 +294,8 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        // If a UPI123 payment session reached a terminal state while the user
-        // was in the dialer, show the result screen instead of the home screen.
         val app = application as? ProximityApplication
-        val sessionManager = app?.paymentSessionManager
-        val terminalState = sessionManager?.paymentState?.value
-        if (terminalState is PaymentState.Success || terminalState is PaymentState.Failed ||
-            terminalState is PaymentState.Cancelled || terminalState is PaymentState.NeedsReview ||
-            terminalState is PaymentState.Timeout
-        ) {
-            val resultIntent = Intent(this, PaymentResultActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                when (terminalState) {
-                    is PaymentState.Success -> {
-                        putExtra("status", "SUCCESS")
-                        putExtra("transaction_id", terminalState.transactionId)
-                        putExtra("amount", terminalState.amount)
-                        putExtra("bank_name", terminalState.bankReference)
-                        putExtra("phone_number", terminalState.phoneNumber)
-                    }
-                    is PaymentState.Failed -> {
-                        putExtra("status", "FAILED")
-                        putExtra("transaction_id", terminalState.transactionId)
-                        putExtra("amount", terminalState.amount)
-                        putExtra("error_message", terminalState.error)
-                        putExtra("phone_number", terminalState.phoneNumber)
-                    }
-                    is PaymentState.Cancelled -> {
-                        putExtra("status", "CANCELLED")
-                        putExtra("transaction_id", terminalState.transactionId)
-                        putExtra("amount", terminalState.amount)
-                        putExtra("error_message", terminalState.reason)
-                        putExtra("phone_number", terminalState.phoneNumber)
-                    }
-                    is PaymentState.NeedsReview -> {
-                        putExtra("status", "NEEDS_REVIEW")
-                        putExtra("transaction_id", terminalState.transactionId)
-                        putExtra("amount", terminalState.amount)
-                        putExtra("phone_number", terminalState.phoneNumber)
-                    }
-                    is PaymentState.Timeout -> {
-                        putExtra("status", "TIMEOUT")
-                        putExtra("transaction_id", terminalState.transactionId)
-                        putExtra("amount", terminalState.amount)
-                        putExtra("error_message", "Payment timed out waiting for bank confirmation")
-                        putExtra("phone_number", terminalState.phoneNumber)
-                    }
-                    else -> Unit
-                }
-            }
-            startActivity(resultIntent)
-            sessionManager.acknowledgeResult()
-            finish()
-            return
-        }
-
         val settingsRepository = app?.settingsRepository ?: SettingsRepository(applicationContext)
-
-        // Extract shortcut action from intent (set by SplashActivity)
-        val shortcutAction = intent.getStringExtra("shortcut_action")
 
         setContent {
             val savedSettings by settingsRepository.settingsFlow.collectAsState()
@@ -377,8 +312,7 @@ class MainActivity : ComponentActivity() {
                             PermissionManager(this).overlayPermissionSettingsIntent()?.let {
                                 overlayPermissionLauncher.launch(it)
                             }
-                        },
-                        shortcutAction = shortcutAction
+                        }
                     )
                 }
             }
@@ -741,8 +675,7 @@ private fun RewardsSectionCardPreview() {
 fun MainScreen(
     onInitiateTransfer: (String, String) -> Unit,
     onQRScanClick: () -> Unit,
-    onRequestOverlayPermission: () -> Unit,
-    shortcutAction: String? = null
+    onRequestOverlayPermission: () -> Unit
 ) {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences(AppConstants.PREFS_NAME, Context.MODE_PRIVATE)
@@ -859,22 +792,7 @@ fun MainScreen(
 
     // ── Walled Garden Detection ───────────────────────────────────────────────
     val app = remember { com.proximity.app.ProximityApplication.from(context) }
-    val walledGardenViewModel: WalledGardenViewModel = viewModel(
-        factory = WalledGardenViewModel.Factory(app!!.container.walledGardenDetector)
-    )
-
-    var walledGardenResult by remember { mutableStateOf<WalledGardenResult?>(null) }
-    LaunchedEffect(walledGardenViewModel.state) {
-        walledGardenResult = walledGardenViewModel.state.value
-    }
-
-    // Force a fresh check when entering the home screen
-    LaunchedEffect(Unit) {
-        walledGardenViewModel.check(force = true)
-    }
-
-    val operatorRaw = app.container.settingsRepository.settingsFlow.value.selectedOperator
-    val operatorName = if (operatorRaw.isBlank() || operatorRaw == "unknown") "your operator" else operatorRaw.replaceFirstChar { it.uppercaseChar() }
+    // Walled Garden Detection removed
 
 
     // Safety: never leave the QR button stuck in "Opening..."
@@ -885,7 +803,20 @@ fun MainScreen(
         }
     }
 
-    val selectedBankName = com.proximity.app.constants.BankRegistry.nameForId(savedBank)
+    val selectedBankName = when (savedBank) {
+        "sbi" -> "State Bank of India"
+        "hdfc" -> "HDFC Bank"
+        "icici" -> "ICICI Bank"
+        "axis" -> "Axis Bank"
+        "kotak" -> "Kotak Mahindra Bank"
+        "pnb" -> "Punjab National Bank"
+        "bob" -> "Bank of Baroda"
+        "yes" -> "Yes Bank"
+        "idbi" -> "IDBI Bank"
+        "canara" -> "Canara Bank"
+        "union" -> "Union Bank of India"
+        else -> "HDFC Bank"
+    }
 
     Scaffold(
                 modifier = Modifier.fillMaxSize(),
@@ -908,18 +839,7 @@ fun MainScreen(
                             .verticalScroll(rememberScrollState())
                             .padding(bottom = innerPadding.calculateBottomPadding() + 16.dp)
                     ) {
-                                            WalledGardenBanner(
-                                                result = walledGardenResult ?: WalledGardenResult.Connected,
-                                                operatorName = operatorName,
-                                                onOpenSettings = {
-                                                    context.startActivity(
-                                                        Intent(
-                                                            android.provider.Settings.ACTION_DATA_ROAMING_SETTINGS
-                                                        )
-                                                    )
-                                                },
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
+                                            // Walled Garden Banner removed
 
 
                                             Spacer(modifier = Modifier.height(24.dp))
@@ -1002,32 +922,20 @@ fun MainScreen(
                         }
                     },
                     onRechargeClick = {
-                        val result = walledGardenResult
-
-                        val portalUrl = when (result) {
-                            is WalledGardenResult.Detected -> result.portalUrl
-                            else -> {
-                                val domain = when (operatorRaw.lowercase()) {
-                                    "jio" -> "jio.com"
-                                    "airtel" -> "airtel.in"
-                                    "vi", "vodafone" -> "myvi.in"
-                                    "bsnl" -> "bsnl.co.in"
-                                    else -> "jio.com"
-                                }
-                                "https://www.$domain"
-                            }
+                        val operatorRaw = app!!.container.settingsRepository.settingsFlow.value.selectedOperator
+                        val operatorName = if (operatorRaw.isBlank() || operatorRaw == "unknown") "your operator" else operatorRaw.replaceFirstChar { it.uppercaseChar() }
+                        val domain = when(operatorRaw.lowercase()) {
+                            "jio" -> "jio.com"
+                            "airtel" -> "airtel.in"
+                            "vi", "vodafone" -> "myvi.in"
+                            "bsnl" -> "bsnl.co.in"
+                            else -> "jio.com"
                         }
-
-                        val network = when (result) {
-                            is WalledGardenResult.Detected -> result.network
-                            else -> null
-                        }
-
                         val intent = com.proximity.app.ui.activities.RechargeWebActivity.buildIntent(
                             context,
-                            portalUrl,
+                            "https://www.$domain",
                             operatorName,
-                            network
+                            null
                         )
                         context.startActivity(intent)
                     },
@@ -1085,8 +993,7 @@ fun MainScreen(
                 PayContactDialog(
                     onDismiss = { showPayContact = false },
                     onConfirm = { phone, amt ->
-                        val smsGranted = permissionManager?.checkSMSPermissions() == true
-                        if (!smsGranted) {
+                        if (permissionManager?.checkSMSPermissions() != true) {
                             pendingSmsAction = {
                                 showPayContact = false
                                 onInitiateTransfer(phone, amt)

@@ -38,7 +38,6 @@ import com.proximity.app.managers.CallManager
 import com.proximity.app.ui.components.*
 import com.proximity.app.ui.theme.LocalProximityAccentTheme
 import com.proximity.app.ui.theme.ProximityTheme
-import com.proximity.app.data.SettingsRepository
 
 class PaymentGuidanceActivity : ComponentActivity() {
 
@@ -68,7 +67,6 @@ class PaymentGuidanceActivity : ComponentActivity() {
                         PaymentGuidanceScreen(
                             phoneNumber = phoneNumber,
                             amount = amount,
-                            bankId = savedSettings.bankId,
                             onBack = { finish() },
                             onProceed = {
                                 initiatePayment(phoneNumber, amount)
@@ -101,12 +99,16 @@ class PaymentGuidanceActivity : ComponentActivity() {
         val success = callManager.initiateUPI123Call(phoneNumber, amount)
 
         if (success) {
-            // ACTION_DIAL / TelecomManager places the call. We don't show an
-            // overlay — the system dialer handles the call, and we listen for
-            // the confirming SMS in the background (SimpleSMSReceiver).
-            // When the user returns to the app, MainActivity will show the
-            // result if the session has reached a terminal state.
-            finish()
+            val progressIntent = Intent(this, com.proximity.app.ui.activities.PaymentProgressActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                putExtra(com.proximity.app.ui.activities.PaymentProgressActivity.EXTRA_PHONE_NUMBER, phoneNumber)
+                putExtra(com.proximity.app.ui.activities.PaymentProgressActivity.EXTRA_AMOUNT, amount)
+            }
+            // Delay slightly to allow the telecom call to bind
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                startActivity(progressIntent)
+                finish()
+            }, 1000)
         } else {
             Log.e(TAG, "Failed to initiate UPI123 call")
             sessionManager.onDialFailed("Could not start the payment call")
@@ -121,7 +123,6 @@ class PaymentGuidanceActivity : ComponentActivity() {
 fun PaymentGuidanceScreen(
     phoneNumber: String,
     amount: String,
-    bankId: String,
     onBack: () -> Unit,
     onProceed: () -> Unit
 ) {
@@ -253,7 +254,7 @@ fun PaymentGuidanceScreen(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = bankNameForId(bankId),
+                                text = "Union Bank",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -414,22 +415,6 @@ private fun formatPhoneDisplay(number: String): String {
     return "${digits.substring(0, 3)} ${digits.substring(3, 6)} ${digits.substring(6)}"
 }
 
-private fun bankNameForId(bankId: String): String =
-    when (bankId) {
-        "sbi" -> "State Bank of India"
-        "hdfc" -> "HDFC Bank"
-        "icici" -> "ICICI Bank"
-        "axis" -> "Axis Bank"
-        "kotak" -> "Kotak Mahindra Bank"
-        "bob" -> "Bank of Baroda"
-        "pnbs" -> "Punjab National Bank"
-        "canara" -> "Canara Bank"
-        "ubi" -> "Union Bank of India"
-        "indusind" -> "IndusInd Bank"
-        "idbi" -> "IDBI Bank"
-        else -> bankId.replaceFirstChar { it.uppercase() }
-    }
-
 @Preview(name = "Payment Guidance - Light", showBackground = true)
 @Preview(name = "Payment Guidance - Dark", showBackground = true, backgroundColor = 0xFF090D14)
 @Composable
@@ -438,7 +423,6 @@ private fun PaymentGuidanceScreenPreview() {
         PaymentGuidanceScreen(
             phoneNumber = "9876543210",
             amount = "25",
-            bankId = "hdfc",
             onBack = {},
             onProceed = {}
         )

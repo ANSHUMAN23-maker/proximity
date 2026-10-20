@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Proximity
+
 package com.proximity.app.constants
 
 import android.Manifest
@@ -8,6 +11,7 @@ object PermissionConstants {
     val REQUIRED_PERMISSIONS: Array<String>
         get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             arrayOf(
+                Manifest.permission.CALL_PHONE,
                 Manifest.permission.READ_PHONE_STATE,
                 Manifest.permission.MODIFY_AUDIO_SETTINGS,
                 Manifest.permission.CAMERA,
@@ -17,6 +21,7 @@ object PermissionConstants {
             )
         } else {
             arrayOf(
+                Manifest.permission.CALL_PHONE,
                 Manifest.permission.READ_PHONE_STATE,
                 Manifest.permission.MODIFY_AUDIO_SETTINGS,
                 Manifest.permission.CAMERA,
@@ -26,10 +31,12 @@ object PermissionConstants {
         }
 
     val CRITICAL_PERMISSIONS = arrayOf(
+        Manifest.permission.CALL_PHONE,
         Manifest.permission.READ_PHONE_STATE
     )
 
     val PHONE_PERMISSIONS = arrayOf(
+        Manifest.permission.CALL_PHONE,
         Manifest.permission.READ_PHONE_STATE,
         Manifest.permission.ANSWER_PHONE_CALLS
     )

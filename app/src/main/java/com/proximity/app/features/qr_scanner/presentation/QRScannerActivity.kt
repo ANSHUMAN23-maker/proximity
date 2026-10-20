@@ -136,7 +136,15 @@ class QRScannerActivity : ComponentActivity() {
         handlePermissionResult(permissions)
     }
 
-    // ACTION_DIAL requires no runtime permission
+    private val callPhonePermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            dialUSSD()
+        } else {
+            showError(getString(R.string.error_call_permission_required_payments))
+        }
+    }
 
     private val galleryPickerLauncher = registerForActivityResult(
         ActivityResultContracts.PickVisualMedia()
@@ -364,8 +372,11 @@ class QRScannerActivity : ComponentActivity() {
     private fun dialUSSD() {
         val ussdCode = "*99*1*3#"
         val ussd = ussdCode.replace("#", Uri.encode("#"))
-        // ACTION_DIAL requires no runtime permission
-        val intent = Intent(Intent.ACTION_DIAL).apply {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+            callPhonePermissionLauncher.launch(Manifest.permission.CALL_PHONE)
+            return
+        }
+        val intent = Intent(Intent.ACTION_CALL).apply {
             data = Uri.parse("tel:$ussd")
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }

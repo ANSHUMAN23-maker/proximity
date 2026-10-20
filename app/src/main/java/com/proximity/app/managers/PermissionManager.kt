@@ -30,7 +30,8 @@ class PermissionManager(private val activity: Activity) {
     }
 
     fun hasPhonePermissions(): Boolean {
-        return isPermissionGranted(Manifest.permission.READ_PHONE_STATE)
+        return isPermissionGranted(Manifest.permission.CALL_PHONE) &&
+            isPermissionGranted(Manifest.permission.READ_PHONE_STATE)
     }
 
     fun hasCameraPermission(): Boolean {

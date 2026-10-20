@@ -4,8 +4,6 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 @Database(
@@ -44,9 +42,5 @@ abstract class AppDatabase : RoomDatabase() {
                 }
             }
         }
-        suspend fun getDatabaseSafe(context: Context): AppDatabase =
-            withContext(Dispatchers.IO) {
-                getDatabase(context)
-            }
     }
 }

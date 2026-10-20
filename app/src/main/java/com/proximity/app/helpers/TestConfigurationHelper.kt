@@ -12,9 +12,6 @@ import com.proximity.app.data.TestResultsManager
 import com.proximity.app.managers.CallManager
 import com.proximity.app.managers.CallType
 import com.proximity.app.managers.PermissionManager
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 
 
 class TestConfigurationHelper(
@@ -36,43 +33,6 @@ class TestConfigurationHelper(
 
     // Test state variables
     private var currentTestingType: CallType? = null
-
-    // StateFlow for reactive UI updates (replaces polling loop)
-    private val _testStates = MutableStateFlow(TestStates(
-        ussdTesting = false,
-        showUssdDialog = false,
-        ussdTestCompleted = false,
-        upi123Testing = false,
-        upi123TestCompleted = false,
-        voiceTesting = false,
-        showVoiceDialog = false,
-        voiceTestCompleted = false,
-        showCallCompleteButton = false,
-        ussdProgressMessage = "Initializing...",
-        showUssdConfigurationOptions = false,
-        showUpi123Dialog = false,
-        showUpi123ConfigurationOptions = false
-    ))
-    val testStatesFlow: StateFlow<TestStates> = _testStates.asStateFlow()
-
-    private fun emitTestStates() {
-        _testStates.value = TestStates(
-            ussdTesting = ussdTesting,
-            showUssdDialog = showUssdDialog,
-            ussdTestCompleted = ussdTestCompleted,
-            upi123Testing = upi123Testing,
-            upi123TestCompleted = upi123TestCompleted,
-            voiceTesting = voiceTesting,
-            showVoiceDialog = showVoiceDialog,
-            voiceTestCompleted = voiceTestCompleted,
-            showCallCompleteButton = showCallCompleteButton,
-            ussdProgressMessage = ussdProgressMessage,
-            showUssdConfigurationOptions = showUssdConfigurationOptions,
-            showUpi123Dialog = showUpi123Dialog,
-            showUpi123ConfigurationOptions = showUpi123ConfigurationOptions
-        )
-    }
-
     private var ussdTesting = false
     private var showUssdDialog = false
     private var ussdTestCompleted = false
@@ -162,7 +122,6 @@ class TestConfigurationHelper(
                 uiCallback.updateUssdTesting(true)
                 uiCallback.updateUssdDialog(true)
                 uiCallback.updateUssdProgressMessage(ussdProgressMessage)
-                emitTestStates()
                 Log.d(TAG, "USSD state set - ussdTesting: $ussdTesting, showUssdDialog: $showUssdDialog")
             }
             CallType.VOICE -> {
@@ -170,7 +129,6 @@ class TestConfigurationHelper(
                 showVoiceDialog = true
                 uiCallback.updateVoiceTesting(true)
                 uiCallback.updateVoiceDialog(true)
-                emitTestStates()
             }
             CallType.MANUAL_TRANSFER -> {
                 // Manual transfer testing - similar to voice call
@@ -178,7 +136,6 @@ class TestConfigurationHelper(
                 showVoiceDialog = true
                 uiCallback.updateVoiceTesting(true)
                 uiCallback.updateVoiceDialog(true)
-                emitTestStates()
             }
             CallType.UPI123 -> {
                 Log.w(TAG, "UPI123 should use initiateUpi123Test() method instead of initiateCall()")
@@ -223,11 +180,9 @@ class TestConfigurationHelper(
                     CallType.USSD -> {
                         showCallCompleteButton = true
                         uiCallback.updateCallCompleteButton(true)
-                        emitTestStates()
                     }
                 }
                 currentTestingType = null
-                emitTestStates()
             }
         )
     }
@@ -236,13 +191,11 @@ class TestConfigurationHelper(
     private fun cancelUssdTimeout() {
         ussdTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
         ussdTimeoutRunnable = null
-        emitTestStates()
     }
 
     private fun cancelUpi123ConfigDelay() {
         upi123ConfigDelayRunnable?.let { mainHandler.removeCallbacks(it) }
         upi123ConfigDelayRunnable = null
-        emitTestStates()
     }
 
     private fun startUssdTimeout() {
@@ -256,7 +209,6 @@ class TestConfigurationHelper(
                 showUssdConfigurationOptions = true
                 uiCallback.updateUssdDialog(false)
                 uiCallback.updateUssdConfigurationOptions(true)
-                emitTestStates()
                 Log.d(TAG, "Configuration dialog shown after 25 seconds - showUssdDialog: $showUssdDialog, showUssdConfigurationOptions: $showUssdConfigurationOptions")
             } else {
                 Log.d(TAG, "USSD timeout reached but conditions not met - ussdTesting: $ussdTesting, ussdTestCompleted: $ussdTestCompleted")
@@ -277,7 +229,6 @@ class TestConfigurationHelper(
         uiCallback.updateUssdTesting(false)
         uiCallback.updateUssdDialog(false)
         uiCallback.updateUssdConfigurationOptions(false)
-        emitTestStates()
         if (fromDoesNotWork) {
             SetupHelper.setUserReportedUssdNotWorking(context, true)
             uiCallback.showToast(context.getString(R.string.status_scan_to_pay_disabled))
@@ -296,7 +247,6 @@ class TestConfigurationHelper(
         uiCallback.updateUpi123Testing(false)
         uiCallback.updateUpi123Dialog(false)
         uiCallback.updateUpi123ConfigurationOptions(false)
-        emitTestStates()
     }
 
     fun handleUssdConfigurationConfirmation(configured: Boolean) {
@@ -322,7 +272,6 @@ class TestConfigurationHelper(
         uiCallback.updateUssdConfigurationOptions(false)
         uiCallback.updateUssdDialog(false)
         uiCallback.updateUssdTesting(false)
-        emitTestStates()
     }
 
     fun handleUpi123ConfigurationConfirmation(configured: Boolean) {
@@ -347,7 +296,6 @@ class TestConfigurationHelper(
         uiCallback.updateUpi123ConfigurationOptions(false)
         uiCallback.updateUpi123Dialog(false)
         uiCallback.updateUpi123Testing(false)
-        emitTestStates()
     }
 
     fun initiateUpi123Test() {
@@ -361,7 +309,6 @@ class TestConfigurationHelper(
             showUpi123Dialog = true
             uiCallback.updateUpi123Testing(true)
             uiCallback.updateUpi123Dialog(true)
-            emitTestStates()
 
             // Initiate UPI123 call - simple flow
             callManager.initiateCall(
@@ -375,7 +322,6 @@ class TestConfigurationHelper(
                         // Stop testing state
                         upi123Testing = false
                         uiCallback.updateUpi123Testing(false)
-                        emitTestStates()
 
                         cancelUpi123ConfigDelay()
                         upi123ConfigDelayRunnable = Runnable {
@@ -412,7 +358,6 @@ class TestConfigurationHelper(
     fun skipTests() {
         // Save current test results before continuing
         saveTestResults(ussdTestCompleted, upi123TestCompleted)
-        emitTestStates()
 
         // Mark test configuration as completed even when skipped
         val sharedPreferences = context.getSharedPreferences("ProximityPrefs", Context.MODE_PRIVATE)
@@ -426,7 +371,6 @@ class TestConfigurationHelper(
     fun continueToMain() {
         // Save test results before continuing
         saveTestResults(ussdTestCompleted, upi123TestCompleted)
-        emitTestStates()
 
         // Mark test configuration as completed
         val sharedPreferences = context.getSharedPreferences("ProximityPrefs", Context.MODE_PRIVATE)
@@ -450,7 +394,21 @@ class TestConfigurationHelper(
     }
 
     fun getTestStates(): TestStates {
-        return _testStates.value
+        return TestStates(
+            ussdTesting = ussdTesting,
+            showUssdDialog = showUssdDialog,
+            ussdTestCompleted = ussdTestCompleted,
+            upi123Testing = upi123Testing,
+            upi123TestCompleted = upi123TestCompleted,
+            voiceTesting = voiceTesting,
+            showVoiceDialog = showVoiceDialog,
+            voiceTestCompleted = voiceTestCompleted,
+            showCallCompleteButton = showCallCompleteButton,
+            ussdProgressMessage = ussdProgressMessage,
+            showUssdConfigurationOptions = showUssdConfigurationOptions,
+            showUpi123Dialog = showUpi123Dialog,
+            showUpi123ConfigurationOptions = showUpi123ConfigurationOptions
+        )
     }
 
     data class TestStates(

@@ -232,11 +232,10 @@ object SmsTransactionParser {
                 return bankName
             }
         }
-        // Only match proper DLT sender headers (e.g., AD-ICICIB, VM-AXISBK).
-        // Bare 6-char patterns (^[A-Z]{6}$ / ^[0-9]{6}$) were removed because
-        // they match any promo sender like AMAZON, GOOGLE, FLIPKART and could
-        // pull non-bank SMS into the payment pipeline.
-        if (sender.matches(Regex("^[A-Z]{2}-[A-Z0-9]{6}(-[A-Z])?$"))) {
+        if (sender.matches(Regex("^[A-Z]{2}-[A-Z0-9]{6}(-[A-Z])?$")) ||
+            sender.matches(Regex("^[A-Z]{6}$")) ||
+            sender.matches(Regex("^[0-9]{6}$"))
+        ) {
             return "Bank"
         }
 

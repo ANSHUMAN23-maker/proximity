@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Required permissions for UPI123 payment system -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <!-- Lets the in-call overlay's "End call" button actually hang up via TelecomManager.endCall() -->
     <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
@@ -68,10 +69,6 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
-            <meta-data
-                android:name="android.app.shortcuts"
-                android:resource="@xml/shortcuts" />
         </activity>
 
         <activity
@@ -162,19 +159,6 @@
             android:theme="@style/Theme.Proximity"
             android:screenOrientation="portrait"
             android:launchMode="singleTask" />
-
-        <!-- Accessibility service: reads USSD dialog text during QR payments \n             (user must enable it in Settings > Accessibility) -->
-        <service
-            android:name=".accessibility.PaymentAccessibilityService"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
-        </service>
 
         <activity
             android:name=".ui.activities.PaymentGuidanceActivity"

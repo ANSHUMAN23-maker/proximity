@@ -61,6 +61,8 @@ import com.proximity.app.ui.theme.ProximityTextPale
 import com.proximity.app.ui.theme.ProximityTheme
 import com.proximity.app.ui.theme.LocalProximityAccentTheme
 import com.proximity.app.ui.theme.ProximityBlack
+import kotlinx.coroutines.delay
+
 class TestConfigurationActivity : ComponentActivity() {
     private lateinit var testHelper: TestConfigurationHelper
 
@@ -180,8 +182,8 @@ fun TestConfigurationScreen(testHelper: TestConfigurationHelper) {
     val context = LocalContext.current
     val accent = LocalProximityAccentTheme.current
 
-    // Collect test states reactively from helper's StateFlow (replaces polling loop)
-    val testStates by testHelper.testStatesFlow.collectAsState()
+    // Get test states from helper
+    val testStates = testHelper.getTestStates()
     var ussdTestCompleted by remember { mutableStateOf(testStates.ussdTestCompleted) }
     var upi123TestCompleted by remember { mutableStateOf(testStates.upi123TestCompleted) }
     var ussdTesting by remember { mutableStateOf(testStates.ussdTesting) }
@@ -207,7 +209,7 @@ fun TestConfigurationScreen(testHelper: TestConfigurationHelper) {
         }
     }
 
-    // Sync local state when testStates flow emits
+    // Update states when helper states change
     LaunchedEffect(testStates) {
         ussdTestCompleted = testStates.ussdTestCompleted
         upi123TestCompleted = testStates.upi123TestCompleted
@@ -219,6 +221,24 @@ fun TestConfigurationScreen(testHelper: TestConfigurationHelper) {
         showUpi123ConfigurationOptions = testStates.showUpi123ConfigurationOptions
         ussdProgressMessage = testStates.ussdProgressMessage
         showCallCompleteButton = testStates.showCallCompleteButton
+    }
+
+    // Add a periodic state check to ensure UI updates
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(100) // Check every 100ms
+            val currentStates = testHelper.getTestStates()
+            ussdTestCompleted = currentStates.ussdTestCompleted
+            upi123TestCompleted = currentStates.upi123TestCompleted
+            ussdTesting = currentStates.ussdTesting
+            upi123Testing = currentStates.upi123Testing
+            showUssdDialog = currentStates.showUssdDialog
+            showUpi123Dialog = currentStates.showUpi123Dialog
+            showUssdConfigurationOptions = currentStates.showUssdConfigurationOptions
+            showUpi123ConfigurationOptions = currentStates.showUpi123ConfigurationOptions
+            ussdProgressMessage = currentStates.ussdProgressMessage
+            showCallCompleteButton = currentStates.showCallCompleteButton
+        }
     }
 
     Box(

@@ -1,7 +1,3 @@
-// Copyright © 2026 Proximity. All rights reserved.
-// Proprietary and confidential — No license granted.
-// See LICENSE file for full terms.
-
 package com.proximity.app.network
 
 import androidx.lifecycle.ViewModel

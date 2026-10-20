@@ -15,6 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
 import com.proximity.app.R
 import com.proximity.app.constants.AppConstants
+import com.proximity.app.constants.PermissionConstants
 import com.proximity.app.payment.Upi123CallStringBuilder
 import com.proximity.app.payment.messageFor
 import java.util.concurrent.atomic.AtomicBoolean
@@ -92,9 +93,15 @@ class CallManager(private val context: Context) {
         onCallEnded: (CallType) -> Unit,
         onUssdComplete: (() -> Unit)? = null
     ) {
-        // ACTION_DIAL requires no special permission, so no permission guard needed
+        // Check permissions using centralized constants
+        if (ContextCompat.checkSelfPermission(context, PermissionConstants.CRITICAL_PERMISSIONS[0]) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.e(TAG, "CALL_PHONE permission not granted")
+            return
+        }
 
-        // Handle USSD calls using ACTION_DIAL
+        // Handle USSD calls using ACTION_CALL (simplified)
         if (callType == CallType.USSD) {
             handleUSSDCall(phoneNumber, onUssdComplete)
             return
@@ -113,8 +120,8 @@ class CallManager(private val context: Context) {
             telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE)
         }
 
-        // Initiate the call via ACTION_DIAL (user confirms in system dialer)
-        val intent = Intent(Intent.ACTION_DIAL).apply {
+        // Initiate the call
+        val intent = Intent(Intent.ACTION_CALL).apply {
             data = Uri.parse("tel:$phoneNumber")
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
@@ -146,7 +153,7 @@ class CallManager(private val context: Context) {
     }
 
     /**
-     * Handle USSD calls using ACTION_DIAL
+     * Handle USSD calls using ACTION_CALL (simplified)
      */
     private fun handleUSSDCall(ussdCode: String, onUssdComplete: (() -> Unit)?) {
         // Prevent double-dial at the call-manager level (atomic check-and-set)
@@ -178,10 +185,10 @@ class CallManager(private val context: Context) {
             telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE)
         }
 
-        // Initiate the USSD call using ACTION_DIAL
+        // Initiate the USSD call using ACTION_CALL
         // URL encode the USSD code to preserve special characters like #
         val encodedUssdCode = Uri.encode(ussdCode)
-        val intent = Intent(Intent.ACTION_DIAL).apply {
+        val intent = Intent(Intent.ACTION_CALL).apply {
             data = Uri.parse("tel:$encodedUssdCode")
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
@@ -280,14 +287,13 @@ class CallManager(private val context: Context) {
     }
 
     fun initiateUPI123Call(phoneNumber: String, amount: String): Boolean {
-        var callString: String? = null
         return try {
             val result = Upi123CallStringBuilder.build(
                 AppConstants.DEFAULT_UPI_SERVICE_NUMBER,
                 phoneNumber.orEmpty(),
                 amount.orEmpty()
             )
-            callString = when (result) {
+            val callString = when (result) {
                 is Upi123CallStringBuilder.Result.Invalid -> {
                     Log.e(TAG, "UPI123 call rejected: ${result.reason.name}")
                     Toast.makeText(
@@ -300,8 +306,18 @@ class CallManager(private val context: Context) {
                 is Upi123CallStringBuilder.Result.Valid -> result.callString
             }
 
-            // MANAGE_OWN_CALLS is a normal permission declared in the manifest — auto-granted at install.
-            // No runtime check needed. If placeCall() fails, fall back to ACTION_DIAL.
+            val hasCallPermission = ContextCompat.checkSelfPermission(
+                context, PermissionConstants.CRITICAL_PERMISSIONS[0]
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!hasCallPermission) {
+                Log.e(TAG, "CALL_PHONE permission not granted")
+                Toast.makeText(
+                    context,
+                    "Phone call permission is required for manual payments. Please grant permission in Settings.",
+                    Toast.LENGTH_LONG
+                ).show()
+                return false
+            }
 
             val telecomManager = context.getSystemService(Context.TELECOM_SERVICE)
                 as android.telecom.TelecomManager
@@ -319,27 +335,9 @@ class CallManager(private val context: Context) {
             Log.d(TAG, "UPI123 call placed via TelecomManager")
             true
         } catch (e: SecurityException) {
-            Log.e(TAG, "TelecomManager.placeCall() failed, falling back to ACTION_DIAL", e)
-            callString ?: run {
-                Log.e(TAG, "No call string available for fallback")
-                Toast.makeText(context, R.string.error_call_failed, Toast.LENGTH_SHORT).show()
-                return false
-            }
-            // Fallback: open the system dialer with the UPI123 number pre-filled.
-            // User confirms the call manually — still completes the payment.
-            val fallbackIntent = Intent(Intent.ACTION_DIAL).apply {
-                data = Uri.parse("tel:${callString!!}")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            try {
-                context.startActivity(fallbackIntent)
-                Log.d(TAG, "UPI123 fallback dialer launched")
-                true
-            } catch (e2: Exception) {
-                Log.e(TAG, "Fallback dialer also failed", e2)
-                Toast.makeText(context, R.string.error_call_failed, Toast.LENGTH_SHORT).show()
-                false
-            }
+            Log.e(TAG, "Security exception while initiating call", e)
+            Toast.makeText(context, R.string.error_call_permission_denied, Toast.LENGTH_SHORT).show()
+            false
         } catch (e: Exception) {
             Log.e(TAG, "Unexpected error while initiating UPI123 call", e)
             Toast.makeText(context, R.string.error_call_failed, Toast.LENGTH_SHORT).show()

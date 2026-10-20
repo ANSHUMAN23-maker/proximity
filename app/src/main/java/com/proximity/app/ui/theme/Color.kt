@@ -64,111 +64,56 @@ val TealAccentTheme = ProximityAccentTheme(
 
 val LocalProximityAccentTheme = compositionLocalOf { TealAccentTheme }
 
-// Legacy aliases - DEPRECATED. Use MaterialTheme.colorScheme or canonical palette values directly.
-// These aliases exist for backward compatibility only and will be removed in a future release.
-
-@Deprecated("Use MaterialTheme.colorScheme.background or AbyssalCharcoal directly")
+// Legacy aliases - map to NEW slate/teal values so existing code compiles unchanged
 val ProximityBlack: Color
     @Composable get() = MaterialTheme.colorScheme.background
-
-@Deprecated("Use MaterialTheme.colorScheme.surface or DeepCharcoal directly")
 val ProximityDarkGray: Color
     @Composable get() = MaterialTheme.colorScheme.surface
-
-@Deprecated("Use MaterialTheme.colorScheme.surfaceVariant or CharcoalSurface directly")
 val ProximitySurfaceDim: Color
     @Composable get() = MaterialTheme.colorScheme.surfaceVariant
-
-@Deprecated("Use MaterialTheme.colorScheme.surfaceVariant or CharcoalSurface directly")
 val ProximityMediumGray: Color
     @Composable get() = MaterialTheme.colorScheme.surfaceVariant
-
-@Deprecated("Use MaterialTheme.colorScheme.outline or CharcoalOutline directly")
 val ProximityLightGray: Color
     @Composable get() = MaterialTheme.colorScheme.outline
-
-@Deprecated("Use MaterialTheme.colorScheme.outlineVariant or CharcoalOutlineStrong directly")
 val ProximityOutlineGray: Color
     @Composable get() = MaterialTheme.colorScheme.outlineVariant
-
-@Deprecated("Use MaterialTheme.colorScheme.primary or ProximityTeal directly")
 val ProximityBrandPrimary: Color
     @Composable get() = MaterialTheme.colorScheme.primary
-
-@Deprecated("Use MaterialTheme.colorScheme.secondary or ProximityTealLight directly")
 val ProximityBrandAccent: Color
     @Composable get() = MaterialTheme.colorScheme.secondary
-
-@Deprecated("Use StatusGreen directly")
 val ProximityAccentGreen = StatusGreen
-
-@Deprecated("Use MaterialTheme.colorScheme.secondary or ProximityTealLight directly")
 val ProximityAccentBlue: Color
     @Composable get() = MaterialTheme.colorScheme.secondary
-
-@Deprecated("Use MaterialTheme.colorScheme.onSurface or TextPrimary directly")
 val ProximityTextWhite: Color
     @Composable get() = MaterialTheme.colorScheme.onSurface
-
-@Deprecated("Use MaterialTheme.colorScheme.onSurface or TextPrimary directly")
 val ProximityWhite: Color
     @Composable get() = MaterialTheme.colorScheme.onSurface
-
-@Deprecated("Use MaterialTheme.colorScheme.onSurfaceVariant or TextSecondary directly")
 val ProximityTextLightGray: Color
     @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
-
-@Deprecated("Use MaterialTheme.colorScheme.onSurfaceVariant or TextSecondary directly")
 val ProximityTextGray: Color
     @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
-
-@Deprecated("Use MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) or TextSecondary with alpha directly")
 val ProximityTextPale: Color
     @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
 val OverlayBlack = Color(0xCC0D0D0D)
 
-@Deprecated("Use StatusGreen directly")
 val ProximityStatusSuccess = StatusGreen
-
-@Deprecated("Use StatusRed directly")
 val ProximityStatusError = StatusRed
-
-@Deprecated("Use StatusAmber directly")
 val ProximityStatusWarning = StatusAmber
-
-@Deprecated("Use TextDisabled directly")
 val ProximityDisabledGray = TextDisabled
-
-@Deprecated("Use StatusGreen directly")
 val ProximityAccentGreenBright = StatusGreen
 
-// Additional legacy aliases - DEPRECATED
-@Deprecated("Use MaterialTheme.colorScheme.background or AbyssalCharcoal directly")
+// Additional legacy aliases
 val InkBlack: Color
     @Composable get() = MaterialTheme.colorScheme.background
-
-@Deprecated("Use MaterialTheme.colorScheme.surface or DeepCharcoal directly")
 val InkDark: Color
     @Composable get() = MaterialTheme.colorScheme.surface
-
-@Deprecated("Use MaterialTheme.colorScheme.surfaceVariant or CharcoalSurface directly")
 val InkCard: Color
     @Composable get() = MaterialTheme.colorScheme.surfaceVariant
-
-@Deprecated("Use MaterialTheme.colorScheme.outline or CharcoalOutline directly")
 val InkDivider: Color
     @Composable get() = MaterialTheme.colorScheme.outline
-
-@Deprecated("Use ProximityTeal directly")
 val ElectricIndigo = ProximityTeal
-
-@Deprecated("Use ProximityTealLight directly")
 val IndigoSoft = ProximityTealLight
-
-@Deprecated("Use ProximityGold directly")
 val BrandGold = ProximityGold
-
-@Deprecated("Use TealAccentTheme directly")
 val BlueAccentTheme = TealAccentTheme
 
 // Status color mapping

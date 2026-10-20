@@ -43,7 +43,6 @@ class PaymentResultActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val app = application as? ProximityApplication
         val settingsRepository = app?.settingsRepository ?: com.proximity.app.data.SettingsRepository(applicationContext)
-        val sessionManager = app?.paymentSessionManager
 
         setContent {
             val savedSettings by settingsRepository.settingsFlow.collectAsState()
@@ -51,34 +50,17 @@ class PaymentResultActivity : ComponentActivity() {
                 ProximityTheme(darkTheme = savedSettings.darkModeEnabled) {
                     PaymentResultScreen(
                         intent = intent,
-                        onDone = {
-                            sessionManager?.acknowledgeResult()
-                            redirectToMain()
-                        }
+                        onDone = { finish() }
                     )
                 }
             }
         }
-    }
-
-    private fun redirectToMain() {
-        val intent = Intent(this, com.proximity.app.MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        startActivity(intent)
-        finish()
     }
 }
 
 @Composable
 fun PaymentResultScreen(intent: Intent, onDone: () -> Unit) {
     BackHandler(onBack = onDone)
-
-    // Auto-redirect back to the app after 3 seconds
-    LaunchedEffect(Unit) {
-        delay(3000)
-        onDone()
-    }
 
     val context = LocalContext.current
     val accent = LocalProximityAccentTheme.current
