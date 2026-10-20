@@ -305,4 +305,10 @@
     <string name="recharge_success_body">If your payment succeeded, return and try your UPI payment again.</string>
     <string name="recharge_action_retry">Retry</string>
     <string name="recharge_action_browser">Open in Chrome</string>
+
+    <!-- USSD Accessibility Service -->
+    <string name="accessibility_service_label">Proximity USSD Reader</string>
+    <string name="accessibility_service_description">Reads USSD payment response dialogs to detect payment success and automatically present payment details.</string>
+    <string name="accessibility_permission_title">USSD Reader</string>
+    <string name="accessibility_permission_subtitle">Auto-read USSD payment dialogs</string>
 </resources>

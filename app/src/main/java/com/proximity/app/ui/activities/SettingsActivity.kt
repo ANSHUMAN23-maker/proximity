@@ -171,7 +171,8 @@ class SettingsViewModel : androidx.lifecycle.ViewModel() {
                 Settings.canDrawOverlays(context)
             } else {
                 true
-            })
+            }),
+            "accessibility" to com.proximity.app.utils.UssdAccessibilityUtils.isAccessibilityServiceEnabled(context)
         )
         state = state.copy(permissions = perms)
     }
@@ -368,6 +369,16 @@ fun SettingsScreen(
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                     onRequestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
                                 }
+                            }
+                        )
+                        GroupDivider()
+                        PermissionRow(
+                            icon = Icons.Default.Accessibility,
+                            title = stringResource(R.string.accessibility_permission_title),
+                            subtitle = stringResource(R.string.accessibility_permission_subtitle),
+                            granted = state.permissions["accessibility"] ?: false,
+                            onRequest = {
+                                com.proximity.app.utils.UssdAccessibilityUtils.openAccessibilitySettings(context)
                             }
                         )
                     }
