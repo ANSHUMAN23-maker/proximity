@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+
+<html class="bg-[#f8fafc] text-slate-800 antialiased" lang="en" style=""><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Proximity - Home</title>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    ::-webkit-scrollbar {
+      display: none;
+    }
+  </style>
+</head>
+<body class="bg-[#f8fafc] flex justify-center items-center min-h-screen m-0 p-0 select-none">
+<!-- Mobile Screen Container (390 x 840) -->
+<div class="relative w-[390px] h-[840px] bg-[#f8fafc] flex flex-col justify-between overflow-hidden shadow-2xl border border-slate-200">
+<!-- Top Scrollable Content Container -->
+<div class="flex-1 flex flex-col overflow-y-auto pb-28 relative z-10 px-5">
+<!-- Status Bar -->
+<!-- App Header / Logo -->
+<header class="pt-2 pb-4 flex items-center gap-2.5" data-purpose="app-branding">
+<img alt="Proximity Logo" class="w-7 h-7 object-contain rounded-lg shadow-xs" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0IS2-pi892kryHvp2hI4QXNB6iVeeCHqPfYE5o3whskNH-iU60H07sbICSiWvH_gvEqJMxM8_rp0ZCgEZ_B6MaSN1d1mRB4mw2ZQoTxkLwevkBBOoI83K_jZeaZBMJmztR44YQvGiXiZiRP0PW2CdHexgVtwhCORSR_EyRMzZSVkpHYKl4REjF-nJ6UrO87Maf-qXJJC7UVgZ8jWjtw1wJEJl3AIVERSYpdePdgQdmuuVDiS39wUAqkEXHWd5oTvW"/>
+<span class="text-[21px] font-bold tracking-tight text-slate-900">Proximity</span>
+</header>
+<!-- Traveler Hero Card -->
+<section class="bg-[#008774] text-white p-5 rounded-2xl shadow-sm mb-6 relative overflow-hidden" data-purpose="traveler-hero-card">
+<div class="relative z-10">
+<h1 class="text-[17px] font-medium leading-snug tracking-tight text-white pr-2">Greetings, Traveler from beyond the network</h1>
+</div>
+<!-- Decorative subtle pattern circle -->
+<div class="absolute -right-6 -bottom-6 w-28 h-28 rounded-full bg-white/10 pointer-events-none"></div>
+</section>
+<!-- Section 1: Payments -->
+<section class="mb-6" data-purpose="payments-section">
+<h2 class="text-lg font-bold text-slate-800 mb-3 tracking-tight">Payments</h2>
+<div class="grid grid-cols-3 gap-3">
+<!-- Button 1: Pay a number -->
+<button class="flex flex-col items-center justify-center p-3.5 bg-white border border-slate-200/90 rounded-2xl shadow-xs hover:border-teal-500 hover:shadow-sm active:scale-95 transition-all group" type="button">
+<div class="w-11 h-11 rounded-xl bg-teal-50/80 flex items-center justify-center mb-2 text-[#008774] group-hover:bg-[#008774] group-hover:text-white transition-colors">
+<svg class="w-5 h-5 stroke-[1.8]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<circle cx="10" cy="7" r="4"></circle>
+<path d="M3 20c0-3.3 3.1-6 7-6 .9 0 1.8.1 2.6.4"></path>
+<path d="M19 12v9m-3-3l3 3 3-3" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="text-[11.5px] font-semibold text-slate-800 text-center leading-tight tracking-tight">Pay a number</span>
+</button>
+<!-- Button 2: Scan QR code -->
+<button class="flex flex-col items-center justify-center p-3.5 bg-white border border-slate-200/90 rounded-2xl shadow-xs hover:border-teal-500 hover:shadow-sm active:scale-95 transition-all group" type="button">
+<div class="w-11 h-11 rounded-xl bg-teal-50/80 flex items-center justify-center mb-2 text-[#008774] group-hover:bg-[#008774] group-hover:text-white transition-colors">
+<svg class="w-5 h-5 stroke-[1.8]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M4 16v3a1 1 0 001 1h3M20 16v3a1 1 0 01-1 1h-3" stroke-linecap="round"></path>
+<rect height="8" rx="1.5" stroke-dasharray="2 2" width="8" x="8" y="8"></rect>
+</svg>
+</div>
+<span class="text-[11.5px] font-semibold text-slate-800 text-center leading-tight tracking-tight">Scan QR code</span>
+</button>
+<!-- Button 3: Mobile recharge -->
+<button class="flex flex-col items-center justify-center p-3.5 bg-white border border-slate-200/90 rounded-2xl shadow-xs hover:border-teal-500 hover:shadow-sm active:scale-95 transition-all group" type="button">
+<div class="w-11 h-11 rounded-xl bg-teal-50/80 flex items-center justify-center mb-2 text-[#008774] group-hover:bg-[#008774] group-hover:text-white transition-colors">
+<svg class="w-5 h-5 stroke-[1.8]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<rect height="19" rx="2.5" width="10" x="7" y="2.5"></rect>
+<path d="M12 18h.01" stroke-linecap="round" stroke-width="2.5"></path>
+</svg>
+</div>
+<span class="text-[11.5px] font-semibold text-slate-800 text-center leading-tight tracking-tight">Mobile recharge</span>
+</button>
+</div>
+</section>
+<!-- Section 2: Services -->
+<!-- Section 3: Rewards -->
+<section data-purpose="rewards-section">
+<h2 class="text-lg font-bold text-slate-800 mb-3 tracking-tight">Rewards</h2>
+<div class="bg-teal-50/60 border border-teal-100 rounded-2xl p-4 flex items-center justify-between shadow-xs">
+<!-- Left side icon + info -->
+<div class="flex items-center space-x-3.5">
+<div class="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-xs border border-teal-100 shrink-0 text-[#008774]">
+<svg class="w-5 h-5 stroke-[1.9]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M20 12v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8"></path>
+<path d="M2 7h20v5H2z"></path>
+<path d="M12 22V7"></path>
+<path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"></path>
+<path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"></path>
+</svg>
+</div>
+<div class="flex flex-col">
+<span class="text-[14px] font-semibold text-slate-900 leading-tight">No rewards yet!</span>
+<span class="text-[12px] text-slate-500 font-normal mt-0.5">Cashback, offers &amp; more</span>
+</div>
+</div>
+<!-- Right side arrow button -->
+<button aria-label="View rewards details" class="w-8 h-8 rounded-full bg-teal-100/70 hover:bg-teal-200/80 flex items-center justify-center text-[#008774] transition-colors active:scale-95" type="button">
+<svg class="w-4 h-4 stroke-[2.2]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+</section>
+</div>
+<!-- Bottom Floating Capsule Taskbar & Home Indicator -->
+<div class="absolute bottom-0 left-0 right-0 pointer-events-none z-30 flex flex-col items-center pb-2 bg-gradient-to-t from-[#f8fafc] via-[#f8fafc]/80 to-transparent pt-6">
+<!-- Floating Navigation Bar -->
+<nav class="pointer-events-auto w-[280px] mb-3 bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-full py-2.5 px-6 shadow-lg flex items-center justify-around" data-purpose="bottom-navigation-bar">
+<!-- Home (Active) -->
+<a class="flex flex-col items-center text-[#008774] group focus:outline-none" href="#home">
+<svg class="w-5 h-5 stroke-[2.2]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4a1 1 0 00-1-1h-2a1 1 0 00-1 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1v-9.5z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="text-[11px] font-semibold mt-0.5">Home</span>
+</a>
+<!-- History -->
+<a class="flex flex-col items-center text-slate-500 hover:text-slate-800 transition-colors group focus:outline-none" href="#history">
+<svg class="w-5 h-5 stroke-[1.9]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<circle cx="12" cy="12" r="9"></circle>
+<path d="M12 7v5l3 2" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="text-[11px] font-medium mt-0.5">History</span>
+</a>
+<!-- Settings -->
+<a class="flex flex-col items-center text-slate-500 hover:text-slate-800 transition-colors group focus:outline-none" href="#settings">
+<svg class="w-5 h-5 stroke-[1.9]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<circle cx="12" cy="12" r="3"></circle>
+<path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"></path>
+</svg>
+<span class="text-[11px] font-medium mt-0.5">Settings</span>
+</a>
+</nav>
+<!-- Home Indicator Bar -->
+<div class="w-32 h-1 bg-slate-900/30 rounded-full mt-0.5"></div>
+</div>
+</div>
+</body></html>

@@ -130,22 +130,16 @@ class SplashActivity : ComponentActivity() {
     }
 }
 
-/**
- * Splash Screen content featuring smooth spring-popup logo entrance, lazy-loaded Lottie animation,
- * and adaptive Light/Dark theme styling.
- */
 @Composable
 fun SplashScreenContent(
     onSplashFinished: () -> Unit
 ) {
     val accent = LocalProximityAccentTheme.current
 
-    // Lazy load the Lottie composition asynchronously in the background
     val compositionResult = rememberLottieComposition(LottieCompositionSpec.Asset("splash_logo.json"))
     val composition = compositionResult.value
     val isLottieLoading = compositionResult.isLoading
 
-    // Smooth spring popup entrance scale & alpha for Frame 1
     val entranceScale = remember { Animatable(0.5f) }
     val entranceAlpha = remember { Animatable(0f) }
 
@@ -170,14 +164,12 @@ fun SplashScreenContent(
         speed = 1.25f
     )
 
-    // Trigger splash finish when Lottie animation reaches 100%
     LaunchedEffect(lottieProgress) {
         if (lottieProgress >= 1.0f) {
             onSplashFinished()
         }
     }
 
-    // Safety fallback timeout
     LaunchedEffect(Unit) {
         delay(2200)
         onSplashFinished()
@@ -194,7 +186,6 @@ fun SplashScreenContent(
                 .navigationBarsPadding(),
             contentAlignment = Alignment.Center
         ) {
-            // Background line art animation
             AnimatedContourBackground(modifier = Modifier.fillMaxSize())
 
             Column(
@@ -204,7 +195,6 @@ fun SplashScreenContent(
                     .scale(entranceScale.value)
                     .alpha(entranceAlpha.value)
             ) {
-                // Unified 220.dp Logo Container for perfectly centered popup & smooth transition
                 Box(
                     modifier = Modifier.size(220.dp),
                     contentAlignment = Alignment.Center

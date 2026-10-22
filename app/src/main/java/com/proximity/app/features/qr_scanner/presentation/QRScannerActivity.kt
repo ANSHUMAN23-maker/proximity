@@ -221,7 +221,7 @@ class QRScannerActivity : ComponentActivity() {
                         onTerminateClick = { terminateUSSDProcess() },
                         onUssdCompletedClick = {
                             val sessionManager = ProximityApplication.from(this@QRScannerActivity)?.paymentSessionManager
-                            sessionManager?.onUssdCallEndedManually()
+                            sessionManager?.onUssdCallCompleted()
                             finishedByManualCompletion = true
                             finish()
                         },
@@ -339,7 +339,7 @@ class QRScannerActivity : ComponentActivity() {
         val sessionManager = ProximityApplication.from(this)?.paymentSessionManager
         val sessionTxnId = sessionManager?.begin("", upiData.amount ?: "", upiData.vpa, TransactionSource.QR)
         return try {
-            TransactionDetector.getInstance(this).startOperation("QR_SCAN", upiData.amount, sessionTxnId)
+            TransactionDetector.getInstance(this).startOperation("QR_SCAN", expectedAmount = upiData.amount, sessionTxnId = sessionTxnId)
             true
         } catch (e: IllegalStateException) {
             sessionManager?.onDialFailed("Could not start SMS monitoring")
@@ -829,7 +829,7 @@ fun BlackScreenOverlay(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp)
-                        .pressScale(onClick = onUssdCompletedClick),
+                        .pressScale(),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = accent.primary)
                 ) {
@@ -845,7 +845,7 @@ fun BlackScreenOverlay(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp)
-                        .pressScale(onClick = onTerminateClick),
+                        .pressScale(),
                     shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, StatusRed.copy(alpha = 0.4f)),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusRed)

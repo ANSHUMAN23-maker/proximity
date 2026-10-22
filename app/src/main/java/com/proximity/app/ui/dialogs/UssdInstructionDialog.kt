@@ -163,7 +163,7 @@ fun UssdInstructionDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp)
-                            .pressScale(onClick = onProceed),
+                            .pressScale(),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = accent.primary)
                     ) {
@@ -195,7 +195,7 @@ fun UssdInstructionDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp)
-                            .pressScale(onClick = onAlreadySetUp),
+                            .pressScale(),
                         shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, accent.primary.copy(alpha = 0.4f)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = accent.primary)

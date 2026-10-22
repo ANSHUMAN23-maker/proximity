@@ -22,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.CompositionLocalProvider
@@ -65,6 +66,7 @@ import kotlinx.coroutines.delay
 
 class TestConfigurationActivity : ComponentActivity() {
     private lateinit var testHelper: TestConfigurationHelper
+    private var showUssdAccessibilityDialog = false
 
     // Phone-call permission group, requested before a test dial. No auto-retry:
     // the user re-taps the test action once granted.
@@ -148,6 +150,12 @@ class TestConfigurationActivity : ComponentActivity() {
                 override fun requestPhonePermissions() {
                     phonePermissionLauncher.launch(PermissionConstants.PHONE_PERMISSIONS)
                 }
+
+                override fun onAccessibilityAcknowledged() {
+                    runOnUiThread {
+                        showUssdAccessibilityDialog = true
+                    }
+                }
             }
         )
 
@@ -160,7 +168,10 @@ class TestConfigurationActivity : ComponentActivity() {
         setContent {
             CompositionLocalProvider(LocalProximityAccentTheme provides TealAccentTheme) {
                 ProximityTheme {
-                    TestConfigurationScreen(testHelper = testHelper)
+                    TestConfigurationScreen(
+                        testHelper = testHelper,
+                        showUssdAccessibilityDialog = ::showUssdAccessibilityDialog
+                    )
                 }
             }
         }
@@ -178,7 +189,10 @@ class TestConfigurationActivity : ComponentActivity() {
 }
 
 @Composable
-fun TestConfigurationScreen(testHelper: TestConfigurationHelper) {
+fun TestConfigurationScreen(
+    testHelper: TestConfigurationHelper,
+    showUssdAccessibilityDialog: () -> Boolean
+) {
     val context = LocalContext.current
     val accent = LocalProximityAccentTheme.current
 
@@ -199,6 +213,12 @@ fun TestConfigurationScreen(testHelper: TestConfigurationHelper) {
     var showCallCompleteButton by remember { mutableStateOf(testStates.showCallCompleteButton) }
     var showUpi123InstructionGuidance by remember { mutableStateOf(false) }
     var showUssdInstructionGuidance by remember { mutableStateOf(false) }
+    var showA11yDialog by remember { mutableStateOf(showUssdAccessibilityDialog()) }
+
+    // Sync the accessibility dialog flag from the activity
+    LaunchedEffect(showUssdAccessibilityDialog) {
+        showA11yDialog = showUssdAccessibilityDialog()
+    }
 
     // Load existing test results
     LaunchedEffect(Unit) {
@@ -391,6 +411,46 @@ fun TestConfigurationScreen(testHelper: TestConfigurationHelper) {
             )
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // USSD Accessibility Permission Dialog
+        if (showA11yDialog) {
+            AlertDialog(
+                onDismissRequest = { showA11yDialog = false },
+                title = {
+                    Text(
+                        text = stringResource(R.string.ussd_accessibility_permission_title),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp
+                    )
+                },
+                text = {
+                    Text(
+                        text = stringResource(R.string.ussd_accessibility_permission_message),
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showA11yDialog = false
+                        com.proximity.app.utils.UssdAccessibilityUtils.openAccessibilitySettings(context)
+                    }) {
+                        Text(stringResource(R.string.ussd_accessibility_permission_cta), fontWeight = FontWeight.SemiBold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showA11yDialog = false
+                        testHelper.retryUssdAfterAccessibility()
+                    }) {
+                        Text(
+                            text = stringResource(R.string.ussd_accessibility_permission_skip),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            )
         }
 
         // USSD Progress Dialog
@@ -703,41 +763,8 @@ val UpiIcon: ImageVector
                 lineTo(22f, 6f)
                 curveTo(22f, 4.89f, 21.11f, 4f, 20f, 4f)
                 close()
-                moveTo(20f, 18f)
-                lineTo(4f, 18f)
-                lineTo(4f, 12f)
-                lineTo(20f, 12f)
-                lineTo(20f, 18f)
-                close()
-                moveTo(20f, 8f)
-                lineTo(4f, 8f)
-                lineTo(4f, 6f)
-                lineTo(20f, 6f)
-                lineTo(20f, 8f)
-                close()
             }
         }.build()
     }
 
-val CheckIcon: ImageVector
-    get() {
-        return ImageVector.Builder(
-            name = "check",
-            defaultWidth = 24.dp,
-            defaultHeight = 24.dp,
-            viewportWidth = 24f,
-            viewportHeight = 24f
-        ).apply {
-            path(
-                fill = null,
-                stroke = androidx.compose.ui.graphics.SolidColor(Color.White),
-                strokeLineWidth = 3f,
-                strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
-                strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
-            ) {
-                moveTo(6f, 12f)
-                lineTo(10f, 16f)
-                lineTo(18f, 8f)
-            }
-        }.build()
-    }
+val CheckIcon: ImageVector = Icons.Filled.CheckCircle

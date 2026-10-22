@@ -12,6 +12,7 @@ import com.proximity.app.data.TestResultsManager
 import com.proximity.app.managers.CallManager
 import com.proximity.app.managers.CallType
 import com.proximity.app.managers.PermissionManager
+import com.proximity.app.utils.UssdAccessibilityUtils
 
 
 class TestConfigurationHelper(
@@ -65,6 +66,12 @@ class TestConfigurationHelper(
         fun navigateToMain()
 
         fun requestPhonePermissions()
+
+        /**
+         * Invoked when the user acknowledges the accessibility permission prompt
+         * and the app should re-check whether the USSD accessibility service is enabled.
+         */
+        fun onAccessibilityAcknowledged()
     }
 
     fun initialize() {
@@ -95,6 +102,14 @@ class TestConfigurationHelper(
         // Guard: prevent duplicate dials
         if (callType == CallType.USSD && (ussdTesting || ussdTestCompleted)) {
             Log.d(TAG, "USSD already in progress or completed, ignoring duplicate dial")
+            return
+        }
+
+        // USSD requires the accessibility service to read dialer responses.
+        // Check before dialing *99#; if not enabled, prompt the user first.
+        if (callType == CallType.USSD && !UssdAccessibilityUtils.isAccessibilityServiceEnabled(context)) {
+            Log.d(TAG, "Accessibility service not enabled for USSD - showing permission prompt")
+            uiCallback.onAccessibilityAcknowledged()
             return
         }
 
@@ -185,6 +200,20 @@ class TestConfigurationHelper(
                 currentTestingType = null
             }
         )
+    }
+
+    /**
+     * Re-check accessibility after the user has been prompted to enable it.
+     * If now enabled, proceed with the USSD dial; otherwise inform the user.
+     */
+    fun retryUssdAfterAccessibility() {
+        if (UssdAccessibilityUtils.isAccessibilityServiceEnabled(context)) {
+            Log.d(TAG, "Accessibility now enabled - proceeding with USSD dial")
+            initiateCall(CallType.USSD)
+        } else {
+            Log.w(TAG, "Accessibility still not enabled - USSD cannot be auto-read")
+            uiCallback.showToast(context.getString(R.string.ussd_accessibility_permission_skip_warning))
+        }
     }
 
 

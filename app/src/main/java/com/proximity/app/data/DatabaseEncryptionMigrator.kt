@@ -15,7 +15,6 @@ internal object DatabaseEncryptionMigrator {
         val dbFile = context.getDatabasePath(dbName)
 
         if (!dbFile.exists()) {
-            // Fresh install â€” Room will create the encrypted DB directly.
             prefs.edit().putBoolean(PREF_MIGRATED, true).apply()
             return
         }
@@ -40,7 +39,6 @@ internal object DatabaseEncryptionMigrator {
         val encryptedFile = File(dbFile.parentFile, "${dbFile.name}.encrypting")
         if (encryptedFile.exists()) encryptedFile.delete()
 
-        // Empty key = plaintext database opened through SQLCipher.
         val plain = SQLiteDatabase.openDatabase(
             dbFile.absolutePath,
             "",

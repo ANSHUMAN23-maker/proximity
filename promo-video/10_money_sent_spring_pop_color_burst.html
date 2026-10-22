@@ -1,0 +1,307 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<title>Payment Success - Proximity</title>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Custom Configuration for Brand Colors & Typography -->
+<script data-purpose="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              teal: '#008774',
+              'teal-dark': '#007565',
+              navy: '#0f172a'
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'Helvetica', 'Arial', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+<!-- Global Custom Styles & Spring Pop, Draw & Particle Burst Animations -->
+<style data-purpose="layout-styles">
+    /* Ensure sleek mobile viewport display with high-fidelity iOS appearance */
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Spring Pop for Badge */
+    @keyframes springPop {
+      0% {
+        transform: scale(0);
+        opacity: 0;
+      }
+      50% {
+        transform: scale(1.15);
+        opacity: 1;
+      }
+      75% {
+        transform: scale(0.96);
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    /* SVG Stroke Draw for Checkmark */
+    @keyframes drawCheck {
+      0% {
+        stroke-dashoffset: 200;
+        opacity: 0;
+      }
+      15% {
+        opacity: 1;
+      }
+      100% {
+        stroke-dashoffset: 0;
+        opacity: 1;
+      }
+    }
+
+    /* Shockwave Ripple */
+    @keyframes shockwave {
+      0% {
+        transform: translate(-50%, -50%) scale(0.4);
+        opacity: 0.85;
+      }
+      60% {
+        opacity: 0.45;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(1.65);
+        opacity: 0;
+      }
+    }
+
+    /* Radial Particle Burst */
+    @keyframes burstFly {
+      0% {
+        transform: translate(0, 0) scale(0) rotate(0deg);
+        opacity: 0;
+      }
+      25% {
+        opacity: 1;
+      }
+      80% {
+        opacity: 0.9;
+      }
+      100% {
+        transform: translate(var(--tx), var(--ty)) scale(var(--scale, 1)) rotate(var(--rot, 180deg));
+        opacity: 0;
+      }
+    }
+
+    /* Animation Classes */
+    .animate-badge-pop {
+      animation: springPop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      transform-origin: center;
+    }
+
+    .animate-check-draw {
+      stroke-dasharray: 200;
+      stroke-dashoffset: 200;
+      animation: drawCheck 0.45s 0.35s ease-out forwards;
+    }
+
+    .animate-shockwave {
+      animation: shockwave 0.85s 0.22s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+    }
+
+    .burst-particle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      pointer-events: none;
+      opacity: 0;
+      animation: burstFly 0.85s cubic-bezier(0.15, 0.85, 0.35, 1) forwards;
+      animation-delay: var(--delay, 0.25s);
+    }
+
+    /* Accessibility: Prefers Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      .animate-badge-pop {
+        animation: none !important;
+        transform: scale(1) !important;
+        opacity: 1 !important;
+      }
+      .animate-check-draw {
+        animation: none !important;
+        stroke-dashoffset: 0 !important;
+        opacity: 1 !important;
+      }
+      .animate-shockwave,
+      .burst-particle {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col justify-between font-sans selection:bg-teal-100 selection:text-teal-900">
+<!-- BEGIN: MainContainer -->
+<main class="w-full max-w-md mx-auto min-h-screen flex flex-col justify-between px-6 py-6 sm:py-8 relative z-10" style="width: 390px; height: 840px; max-width: 390px; max-height: 840px; background-image: url(&quot;https://lh3.googleusercontent.com/aida/AEtjO1WD-36YVsBImGap7eaS1Z-RKbnLEpg-oj8YG4U3_Bp7_R6jSBK0ZuuAFgAAzUMNS5YJpJO2wTNG6NnAIXcbKBdfiOVKHyYhz4BUHIsUHzrIOGcHbakMUqRj_I4TxbQ3mA9SMvKCHhYY4wlWeqwWOtuiZJZ1amC-LvuYxs3FWlLbV03I8PBhlz6Zu3PTSn03gSEzjha0vEc9QW-OvzGSDCW-I4tZwMwpw-Lhm33w5acrJTMuryq0dClR1w&quot;); background-size: cover; background-position: center center; background-repeat: no-repeat;">
+<!-- Top Block: Header, Success State, and Transaction Card -->
+<div class="flex flex-col w-full">
+<!-- BEGIN: NavigationHeader -->
+<header class="flex items-center justify-between pt-2 pb-8 w-full" data-purpose="screen-header">
+<h1 class="text-2xl font-bold tracking-tight text-slate-900">Proximity</h1>
+<button aria-label="Close" class="text-slate-400 hover:text-slate-700 transition-colors p-1.5 rounded-full hover:bg-slate-200/50" type="button">
+<svg class="w-5 h-5 stroke-[2.2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</header>
+<!-- END: NavigationHeader -->
+<!-- BEGIN: SuccessConfirmationSection -->
+<section class="flex flex-col items-center text-center mt-4 mb-8" data-purpose="success-badge-and-title">
+<!-- Interactive Badge Container with Spring Pop, Draw & Particle Burst -->
+<div aria-label="Replay payment animation" class="relative mb-6 drop-shadow-sm flex items-center justify-center cursor-pointer select-none group" id="badge-celebration" role="button" tabindex="0" title="Click to replay animation">
+<!-- Shockwave Ripple -->
+<div class="shockwave-ring absolute top-1/2 left-1/2 w-32 h-32 rounded-full border-2 border-[#008774]/40 pointer-events-none -translate-x-1/2 -translate-y-1/2 animate-shockwave"></div>
+<!-- Radial Confetti & Sparkle Particles (18 particles) -->
+<div class="absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible" id="particles-container">
+<!-- 1. Gold Sparkle Top -->
+<span class="burst-particle w-2.5 h-2.5 bg-[#FFB703] rounded-full" style="--tx: 8px; --ty: -86px; --delay: 0.22s;"></span>
+<!-- 2. Teal Diamond Top Right -->
+<span class="burst-particle w-3 h-3 bg-[#008774] rotate-45" style="--tx: 58px; --ty: -72px; --delay: 0.24s; --rot: 220deg;"></span>
+<!-- 3. Coral Rectangular Confetti -->
+<span class="burst-particle w-3.5 h-2 bg-[#FF5A5F] rounded-sm" style="--tx: 88px; --ty: -38px; --delay: 0.21s; --rot: 310deg; --scale: 0.9;"></span>
+<!-- 4. Electric Turquoise Dot -->
+<span class="burst-particle w-2.5 h-2.5 bg-[#06D6A0] rounded-full" style="--tx: 96px; --ty: 6px; --delay: 0.25s;"></span>
+<!-- 5. Gold Bar Flake -->
+<span class="burst-particle w-4 h-1.5 bg-[#FFD166] rounded-xs" style="--tx: 86px; --ty: 54px; --delay: 0.23s; --rot: 170deg;"></span>
+<!-- 6. Indigo Sparkle Diamond -->
+<span class="burst-particle w-2.5 h-2.5 bg-[#5E60CE] rotate-45" style="--tx: 56px; --ty: 84px; --delay: 0.26s; --rot: 280deg;"></span>
+<!-- 7. Teal Circle Bottom -->
+<span class="burst-particle w-3 h-3 bg-[#008774] rounded-full" style="--tx: 6px; --ty: 98px; --delay: 0.22s;"></span>
+<!-- 8. Coral Sparkle Diamond -->
+<span class="burst-particle w-2.5 h-2.5 bg-[#FF5A5F] rotate-45" style="--tx: -48px; --ty: 84px; --delay: 0.24s; --rot: 190deg;"></span>
+<!-- 9. Amber Flake Bottom-Left -->
+<span class="burst-particle w-3 h-2 bg-[#FFB703] rounded-sm" style="--tx: -86px; --ty: 48px; --delay: 0.25s; --rot: 260deg; --scale: 1.1;"></span>
+<!-- 10. Turquoise Dot Left -->
+<span class="burst-particle w-2.5 h-2.5 bg-[#06D6A0] rounded-full" style="--tx: -98px; --ty: 2px; --delay: 0.22s;"></span>
+<!-- 11. Indigo Flake Left-Top -->
+<span class="burst-particle w-3.5 h-1.5 bg-[#5E60CE] rounded-xs" style="--tx: -84px; --ty: -46px; --delay: 0.27s; --rot: 140deg;"></span>
+<!-- 12. Gold Sparkle Diamond -->
+<span class="burst-particle w-3 h-3 bg-[#FFD166] rotate-45" style="--tx: -54px; --ty: -78px; --delay: 0.23s; --rot: 340deg;"></span>
+<!-- 13. Outer Coral Mini Dot -->
+<span class="burst-particle w-2 h-2 bg-[#FF5A5F] rounded-full" style="--tx: 34px; --ty: -108px; --delay: 0.25s;"></span>
+<!-- 14. Outer Turquoise Flake -->
+<span class="burst-particle w-3 h-2 bg-[#06D6A0] rounded-sm" style="--tx: 112px; --ty: -18px; --delay: 0.24s; --rot: 215deg;"></span>
+<!-- 15. Outer Gold Amber Dot -->
+<span class="burst-particle w-2 h-2 bg-[#FFB703] rounded-full" style="--tx: 68px; --ty: 96px; --delay: 0.26s;"></span>
+<!-- 16. Outer Indigo Mini Diamond -->
+<span class="burst-particle w-2 h-2 bg-[#5E60CE] rotate-45" style="--tx: -32px; --ty: 104px; --delay: 0.23s;"></span>
+<!-- 17. Outer Teal Flake -->
+<span class="burst-particle w-3 h-1.5 bg-[#008774] rounded-xs" style="--tx: -110px; --ty: -22px; --delay: 0.25s; --rot: 195deg;"></span>
+<!-- 18. Outer Soft Amber Sparkle -->
+<span class="burst-particle w-2 h-2 bg-[#FFD166] rounded-full" style="--tx: -34px; --ty: -102px; --delay: 0.24s;"></span>
+</div>
+<!-- Exact Brand Circle Wavy Fill Badge SVG with Spring Pop & Animated Checkmark -->
+<svg class="w-32 h-32 mx-auto relative z-10 transition-transform group-active:scale-95 duration-150 animate-badge-pop" fill="#008774" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+<path d="M240,128c0,10.44238-7.51074,18.27441-14.1377,25.18457-3.77246,3.93359-7.67285,8-9.14648,11.56348-1.35449,3.27343-1.43652,8.69629-1.51562,13.93945-.14747,9.75879-.31446,20.81934-8.0044,28.50879-7.68945,7.68945-18.75,7.85644-28.5083,8.00391-5.24414.0791-10.667.16113-13.94043,1.51562-3.5625,1.47363-7.62988,5.374-11.5625,9.14648C146.27441,232.48926,138.44238,240,127.99951,240c-10.44238,0-18.27392-7.51074-25.18408-14.1377-3.93311-3.77246-8-7.67285-11.56348-9.14648-3.27295-1.35449-8.69531-1.43652-13.93945-1.51562-9.75879-.14747-20.81934-.31446-28.50879-8.00391s-7.85644-18.75-8.00391-28.50879c-.0791-5.24316-.16113-10.666-1.51562-13.93945-1.47363-3.56348-5.374-7.62989-9.14648-11.56348C23.51074,146.27441,16,138.44238,16,128s7.51074-18.27441,14.1377-25.18457c3.77246-3.93359,7.67285-8,9.14648-11.56348,1.35449-3.27343,1.43652-8.69629,1.51562-13.93945.14747-9.75879.31446-20.81934,8.0044-28.50879,7.68945-7.68945,18.75-7.85644,28.5083-8.00391,5.24414-.0791,10.667-.16113,13.94043-1.51562,3.5625-1.47363,7.62988-5.374,11.5625-9.14648C109.72559,23.51074,117.55762,16,128.00049,16c10.44238,0,18.27392,7.51074,25.18408,14.1377,3.93311,3.77246,8,7.67285,11.56348,9.14648,3.27295,1.35449,8.69531,1.43652,13.93945,1.51562,9.75879.14747,20.81934.31446,28.50879,8.00391s7.85644,18.75,8.00391,28.50879c.0791,5.24316.16113,10.666,1.51562,13.93945,1.47363,3.56348,5.374,7.62989,9.14648,11.56348C232.48926,109.72559,240,117.55762,240,128Z"></path>
+<path class="animate-check-draw" d="M78 128 L114 164 L180 94" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="18"></path>
+</svg>
+</div>
+<h2 class="text-[32px] leading-tight font-extrabold text-slate-900 tracking-tight mb-2">
+          Money sent!
+        </h2>
+
+</section>
+<!-- END: SuccessConfirmationSection -->
+<!-- BEGIN: TransactionDetailsCard -->
+<section class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100" data-purpose="transaction-card">
+<!-- Recipient Information Header -->
+<div class="flex items-center justify-between pb-5 border-b border-slate-100">
+<div class="flex items-center space-x-3.5">
+<!-- Avatar Initials -->
+
+<!-- Contact Details -->
+<div class="flex flex-col">
+
+<div class="flex flex-col"><span class="text-xs text-slate-400 font-normal leading-tight">Payment sent to:</span><span class="text-sm text-slate-800 font-medium leading-snug mt-0.5">+91 123 456 7890</span></div>
+</div>
+</div>
+<!-- Transaction Status Badge -->
+
+</div>
+<!-- Transaction Metadata Rows -->
+<div class="pt-4 space-y-3.5 text-sm">
+<!-- Row 1: Amount Paid -->
+<div class="flex justify-between items-center">
+<span class="text-slate-400 font-normal">Amount paid</span>
+<span class="font-bold text-slate-900">₹48.00 USD</span>
+</div>
+<!-- Row 2: Mode of Payment -->
+<div class="flex justify-between items-center">
+<span class="text-slate-400 font-normal">Mode of payment</span>
+<span class="font-medium text-slate-800">via Phone number</span>
+</div>
+<!-- Row 3: Date & Time -->
+<div class="flex justify-between items-center">
+<span class="text-slate-400 font-normal">Date &amp; time</span>
+<span class="font-medium text-slate-800">Oct 2, 2026 · 9:41 AM</span>
+</div>
+<!-- Row 4: Bank Reference -->
+<div class="flex justify-between items-center">
+<span class="text-slate-400 font-normal">Bank Reference</span>
+<span class="font-medium text-slate-800">TXN123456</span>
+</div>
+</div>
+</section>
+<!-- END: TransactionDetailsCard -->
+</div>
+<!-- BEGIN: BottomActionButtons -->
+<footer class="w-full pt-8 pb-3 space-y-3" data-purpose="footer-actions">
+<!-- Share Receipt Button -->
+
+<!-- Back to Home Primary Button -->
+<button class="w-full py-4 px-4 bg-[#008774] active:bg-[#007565] text-white font-bold rounded-2xl flex items-center justify-center transition-colors shadow-sm text-base" type="button">
+        Back to home
+      </button>
+</footer>
+<!-- END: BottomActionButtons -->
+</main>
+<!-- END: MainContainer -->
+<!-- Interactive Re-trigger Script -->
+<script>
+  const celebrationContainer = document.getElementById('badge-celebration');
+  if (celebrationContainer) {
+    const replayAnimation = () => {
+      // Re-trigger CSS animations by cloning & replacing node
+      const newContainer = celebrationContainer.cloneNode(true);
+      celebrationContainer.parentNode.replaceChild(newContainer, celebrationContainer);
+      newContainer.addEventListener('click', replayAnimation);
+      newContainer.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          replayAnimation();
+        }
+      });
+    };
+    celebrationContainer.addEventListener('click', replayAnimation);
+    celebrationContainer.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        replayAnimation();
+      }
+    });
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+</body></html>

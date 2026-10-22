@@ -1,0 +1,208 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<title>Proximity - History</title>
+<!-- Tailwind CSS CDN with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              500: '#14b8a6',
+              600: '#0d9488',
+              700: '#0f766e',
+              800: '#115e59',
+            },
+            status: {
+              success: '#10b981',
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<!-- BEGIN: Custom Styles -->
+<style data-purpose="base-layout">
+    /* iOS friendly bounce and layout settings */
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background-color: #f8fafc;
+    }
+    /* Hide scrollbars while retaining scrollability */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<!-- END: Custom Styles -->
+</head>
+<body class="flex justify-center items-center min-h-screen bg-neutral-100">
+<!-- BEGIN: PhoneShell -->
+<div class="relative w-full overflow-hidden shadow-2xl flex flex-col font-sans sm:rounded-[44px] border border-neutral-200" style="width: 390px; height: 840px; aspect-ratio: 390 / 840; background-image: url(&quot;https://lh3.googleusercontent.com/aida/AEtjO1WD-36YVsBImGap7eaS1Z-RKbnLEpg-oj8YG4U3_Bp7_R6jSBK0ZuuAFgAAzUMNS5YJpJO2wTNG6NnAIXcbKBdfiOVKHyYhz4BUHIsUHzrIOGcHbakMUqRj_I4TxbQ3mA9SMvKCHhYY4wlWeqwWOtuiZJZ1amC-LvuYxs3FWlLbV03I8PBhlz6Zu3PTSn03gSEzjha0vEc9QW-OvzGSDCW-I4tZwMwpw-Lhm33w5acrJTMuryq0dClR1w&quot;); background-size: cover; background-position: center center; background-repeat: no-repeat;">
+<!-- BEGIN: iOSStatusBar -->
+
+<!-- END: iOSStatusBar -->
+<!-- BEGIN: AppHeader -->
+<div class="px-6 pt-3 pb-2 flex items-center space-x-2 shrink-0">
+<!-- Proximity Logo Glyph -->
+<img alt="Proximity Logo" class="w-6 h-6 rounded-md object-contain shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_YtQK0ygvngJze1uwtkm8MDbnAHysKA1eNugQyppkd4wUzBHjg7SEVPPBonvsiYyt8o0JLqjt3k_Y6pMMkR6Airwd9fRJ1MReR4aae6cEv3yyztfcG_1uKFWIDnSspPHpLEWGTyGuwD8H-iXlb6BDxP0VzPjbtRJGCtbYdi6g2XzKngUsWzS2FH7ejarYnAE1pSQGfgqpjddiSihUvQaJiPAFGKgXQpCgFLuXFibqsuoYvhLHJwcvW85zT9nB4lPa">
+<span class="text-base font-bold tracking-tight text-neutral-800">Proximity</span>
+</div>
+<!-- END: AppHeader -->
+<!-- BEGIN: MainContentScrollArea -->
+<main class="flex-1 overflow-y-auto px-6 pt-3 pb-24 no-scrollbar">
+<!-- Page Title Header -->
+<section class="mb-4">
+<h1 class="text-2xl font-bold tracking-tight text-neutral-900">History</h1>
+<p class="text-xs text-neutral-500 font-normal mt-0.5">All your payments, in one place.</p>
+</section>
+<!-- Month Summary Card -->
+
+<!-- Transactions List -->
+<section class="space-y-5" data-purpose="transactions-list">
+<!-- Group: Today -->
+<div>
+<h2 class="text-xs font-semibold text-neutral-700 tracking-tight mb-2.5">Today, 5 October</h2>
+<div class="space-y-3">
+<!-- Transaction 1: Priya Sharma -->
+<article class="flex items-center justify-between py-1">
+<div class="flex items-center space-x-3">
+<!-- Avatar Badge -->
+<div class="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-teal-700 font-medium text-xs shrink-0">
+                  PS
+                </div>
+<!-- Details -->
+<div>
+<h3 class="text-xs font-semibold text-neutral-900">Priya Sharma</h3>
+<p class="text-[10px] text-neutral-400 leading-tight mt-0.5">5 Oct 2026 • 10:42 AM</p>
+<p class="text-[10px] text-neutral-400 leading-tight">Paid to mobile number</p>
+</div>
+</div>
+<!-- Amount & Status -->
+<div class="text-right">
+<span class="text-xs font-bold text-neutral-900 tracking-tight">₹500</span>
+<div class="flex items-center justify-end space-x-1 mt-0.5 text-emerald-600">
+<svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 20 20">
+<path clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" fill-rule="evenodd"></path>
+</svg>
+<span class="text-[10px] font-medium leading-none">Successful</span>
+</div>
+</div>
+</article>
+<!-- Transaction 2: Daily Mart -->
+<article class="flex items-center justify-between py-1">
+<div class="flex items-center space-x-3">
+<!-- Avatar Badge -->
+<div class="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-teal-700 font-medium text-xs shrink-0">
+                  DM
+                </div>
+<!-- Details -->
+<div>
+<h3 class="text-xs font-semibold text-neutral-900">Daily Mart</h3>
+<p class="text-[10px] text-neutral-400 leading-tight mt-0.5">5 Oct 2026 • 9:15 AM</p>
+<p class="text-[10px] text-neutral-400 leading-tight">Paid via QR code</p>
+</div>
+</div>
+<!-- Amount & Status -->
+<div class="text-right">
+<span class="text-xs font-bold text-neutral-900 tracking-tight">₹350</span>
+<div class="flex items-center justify-end space-x-1 mt-0.5 text-emerald-600">
+<svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 20 20">
+<path clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" fill-rule="evenodd"></path>
+</svg>
+<span class="text-[10px] font-medium leading-none">Successful</span>
+</div>
+</div>
+</article>
+</div>
+</div>
+<!-- Group: Yesterday -->
+<div>
+<h2 class="text-xs font-semibold text-neutral-700 tracking-tight mb-2.5">Yesterday, 4 October</h2>
+<div>
+<!-- Transaction 3: Arjun Patel -->
+<article class="flex items-center justify-between py-1">
+<div class="flex items-center space-x-3">
+<!-- Avatar Badge -->
+<div class="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-teal-700 font-medium text-xs shrink-0">
+                  AP
+                </div>
+<!-- Details -->
+<div>
+<h3 class="text-xs font-semibold text-neutral-900">Arjun Patel</h3>
+<p class="text-[10px] text-neutral-400 leading-tight mt-0.5">4 Oct 2026 • 6:30 PM</p>
+<p class="text-[10px] text-neutral-400 leading-tight">Paid to mobile number</p>
+</div>
+</div>
+<!-- Amount & Status -->
+<div class="text-right">
+<span class="text-xs font-bold text-neutral-900 tracking-tight">₹200</span>
+<div class="flex items-center justify-end space-x-1 mt-0.5 text-emerald-600">
+<svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 20 20">
+<path clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" fill-rule="evenodd"></path>
+</svg>
+<span class="text-[10px] font-medium leading-none">Successful</span>
+</div>
+</div>
+</article>
+</div>
+</div>
+</section>
+<!-- Caught Up Footer Note -->
+<footer class="mt-8 text-center" data-purpose="history-footer">
+<p class="text-[10px] text-neutral-400">You're all caught up</p>
+</footer>
+</main>
+<!-- END: MainContentScrollArea -->
+<!-- BEGIN: BottomNavigation -->
+<nav aria-label="Bottom Bar Navigation" class="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur-md border border-neutral-200/80 rounded-full shadow-xl py-2.5 px-6 flex justify-between items-center z-30">
+<!-- Home Tab -->
+<button class="flex flex-col items-center justify-center text-neutral-400 hover:text-neutral-600 transition-colors focus:outline-none" type="button">
+<svg class="w-5 h-5 stroke-current" fill="none" stroke-width="1.8" viewBox="0 0 24 24">
+<path d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="text-[9px] font-medium mt-1">Home</span>
+</button>
+<!-- History Tab (Active) -->
+<button class="flex flex-col items-center justify-center text-teal-700 focus:outline-none" type="button">
+<svg class="w-5 h-5 stroke-current" fill="none" stroke-width="2" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="9"></circle>
+<polyline points="12 7 12 12 15 15"></polyline>
+</svg>
+<span class="text-[9px] font-semibold mt-1">History</span>
+</button>
+<!-- Settings Tab -->
+<button class="flex flex-col items-center justify-center text-neutral-400 hover:text-neutral-600 transition-colors focus:outline-none" type="button">
+<svg class="w-5 h-5 stroke-current" fill="none" stroke-width="1.8" viewBox="0 0 24 24">
+<path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="text-[9px] font-medium mt-1">Settings</span>
+</button>
+</nav>
+<!-- END: BottomNavigation -->
+<!-- BEGIN: iOSHomeIndicator -->
+<div class="absolute bottom-1 left-1/2 -translate-x-1/2 w-32 h-1 bg-neutral-900 rounded-full z-40 pointer-events-none"></div>
+<!-- END: iOSHomeIndicator -->
+</div>
+<!-- END: PhoneShell -->
+
+
+
+
+
+
+
+
+</body></html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<title>Connect bank - Proximity</title>
+<!-- Tailwind CSS CDN with forms plugin -->
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              teal: '#00877a',
+              tealDark: '#00756a',
+              tealLight: '#e6f3f2'
+            }
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Typography & Layout Overrides -->
+<style data-purpose="custom-styling">
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+    .cursor-blink {
+      animation: blink 1s step-start infinite;
+    }
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+  </style>
+<link data-snapdom="injected-import" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"></head>
+<body class="bg-gray-100 flex justify-center items-center min-h-screen p-0 sm:p-4">
+<!-- BEGIN: MobileDeviceContainer -->
+<div class="w-full max-w-[393px] h-[852px] bg-white rounded-[44px] shadow-2xl overflow-hidden flex flex-col justify-between border border-gray-200 relative" data-purpose="mobile-frame" style="width: 390px; height: 840px; aspect-ratio: 390 / 840; max-width: 390px;"><div class="absolute inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true"><svg class="w-full h-full object-cover" viewBox="0 0 393 852" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M-40 120 C60 100, 160 210, 260 170 C360 130, 390 190, 440 180" stroke="#00877a" stroke-width="1.5" stroke-opacity="0.04" fill="none"></path><path d="M-30 180 C80 160, 140 270, 270 230 C370 200, 390 250, 450 240" stroke="#0284c7" stroke-width="1.5" stroke-opacity="0.035" fill="none"></path><path d="M-50 240 C50 220, 170 330, 290 290 C380 260, 410 320, 460 300" stroke="#4f46e5" stroke-width="1.5" stroke-opacity="0.035" fill="none"></path><path d="M-40 310 C70 300, 150 400, 280 350 C370 320, 420 380, 470 370" stroke="#7c3aed" stroke-width="1.5" stroke-opacity="0.03" fill="none"></path><path d="M-60 380 C60 360, 160 470, 300 420 C400 390, 410 460, 480 440" stroke="#e11d48" stroke-width="1.5" stroke-opacity="0.03" fill="none"></path><path d="M-30 460 C90 440, 180 540, 310 490 C410 450, 430 520, 490 510" stroke="#ea580c" stroke-width="1.5" stroke-opacity="0.035" fill="none"></path><path d="M-50 530 C70 510, 190 610, 320 570 C410 530, 440 600, 500 580" stroke="#059669" stroke-width="1.5" stroke-opacity="0.035" fill="none"></path><path d="M-40 610 C80 590, 170 690, 310 650 C400 620, 430 680, 490 670" stroke="#00877a" stroke-width="1.5" stroke-opacity="0.04" fill="none"></path><path d="M-60 690 C60 670, 180 770, 330 720 C420 680, 450 760, 510 740" stroke="#0ea5e9" stroke-width="1.5" stroke-opacity="0.035" fill="none"></path><path d="M-30 770 C90 750, 190 840, 340 800 C430 760, 460 830, 520 820" stroke="#6366f1" stroke-width="1.5" stroke-opacity="0.03" fill="none"></path></svg></div>
+<!-- BEGIN: TopBarArea -->
+<div>
+<!-- iOS Status Bar -->
+
+<!-- Header Navigation Bar -->
+<nav class="px-5 py-3 flex items-center justify-between relative" data-purpose="top-navigation">
+<button aria-label="Go Back" class="w-9 h-9 flex items-center justify-center rounded-full active:bg-gray-100 text-gray-800 transition" type="button">
+<svg class="w-5 h-5 stroke-[2.2] stroke-current" fill="none" viewBox="0 0 24 24">
+<path d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<h1 class="text-[17px] font-semibold text-gray-900 tracking-tight">Setup Proximity</h1>
+<button aria-label="Help" class="w-9 h-9 flex items-center justify-center rounded-full active:bg-gray-100 text-gray-500 transition" type="button">
+<svg class="w-5 h-5 stroke-[2] stroke-current" fill="none" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="9"></circle>
+<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke-linecap="round"></path>
+<path d="M12 17h.01" stroke-linecap="round"></path>
+</svg>
+</button>
+</nav>
+<!-- Stepper / Indicator Bar -->
+<div class="px-6 pt-1 pb-3" data-purpose="step-tracker"><div class="flex items-center justify-between text-[13px] font-medium text-gray-500 mb-1.5"><div class="relative pb-1"><span class="text-brand-teal font-semibold text-[13.5px]">SIM operator</span><div class="absolute bottom-0 left-0 w-full h-[2px] bg-brand-teal rounded-full"></div></div><span class="text-gray-400 text-xs">Step 2 of 2</span></div><div class="w-full h-[1px] bg-gray-100 -mt-[1px]"></div></div>
+<!-- Main Form Section -->
+<main class="px-6 pt-3 relative"><div class="flex flex-col h-full"><h2 class="text-[22px] font-bold text-gray-900 leading-snug">Select your SIM operator</h2><p class="text-[13px] text-gray-500 font-normal mt-1 leading-normal">Choose the telecom network registered with your bank account.</p><div class="mt-3.5 flex items-center space-x-2.5 px-3 py-2 rounded-lg bg-gray-50 border border-gray-100" data-purpose="bank-context"><div class="w-7 h-7 rounded-md bg-white border border-gray-200 flex items-center justify-center flex-shrink-0 text-brand-teal shadow-sm"><svg class="w-4 h-4 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" stroke-linecap="round" stroke-linejoin="round"></path></svg></div><div class="flex-1 min-w-0"><div class="text-[13px] font-semibold text-gray-900 leading-tight">Union Bank of India</div></div></div><div class="mt-4 space-y-2.5"><div class="flex items-center justify-between p-3.5 rounded-xl border-2 border-brand-teal bg-[#e6f3f2]/40 cursor-pointer shadow-sm transition"><div class="flex items-center space-x-3"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDYVkbXqAntYw2ZJwYaD6OD0RSzMlGvSRuXFpZaz2idRhsEcyp-2NczfC-1O2IaFJl1IqVXIpnsRfF09fn7V5w7QEKQ71IzvIlnRdxQyR5I9SzM4hhhyaDAICN1kmfHLsYvcgxXQJHzLWVxCpwmy8xi_y5tW1g82pOVq5n7zhihPwBk6B58uV5qUxKBh3RAqrTIy_o_PFa8LADZ3aMSYtbu_qVU9etEVSTmhf_SSVIEv4gb-ovbJ34W0hCdeSaV5hx" alt="Jio" class="w-10 h-10 object-cover rounded-full shadow-sm flex-shrink-0"><div><div class="text-[14px] font-semibold text-gray-900 leading-snug">Reliance Jio</div><div class="text-[12px] text-gray-500">Jio 4G / 5G</div></div></div><div class="w-5 h-5 rounded-full bg-brand-teal flex items-center justify-center text-white"><svg class="w-3 h-3 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4.5 12.75l6 6 9-13.5" stroke-linecap="round" stroke-linejoin="round"></path></svg></div></div><div class="flex items-center justify-between p-3.5 rounded-xl border border-gray-200 bg-white hover:border-gray-300 cursor-pointer transition"><div class="flex items-center space-x-3"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqyhdRcPkPnGSVkNABXTul0d7fAJcz_wmAsG2Pj0ArQOTrvWEXvhdyXbr26_h9-NEQmGrMxAG64li6TqNuhSpP2wS3QsHaS6dGyUEP9sf4_FWW3VLmkh6MCoddDDw5UxV6yLAigJqLbXkjb3f0EqJgolWo7kwGv3XHcG0epMX_6nBS8-bePG0w49vX_F4WuvixXLkmpN67F421F3NXTS5Y1HLL0uRnkNdPfkSGYX-Y-ry0D5NJB0DhGvLFNmtF6V79" alt="Airtel" class="w-10 h-10 object-cover rounded-full shadow-sm flex-shrink-0"><div><div class="text-[14px] font-semibold text-gray-900 leading-snug">&nbsp;Airtel</div><div class="text-[12px] text-gray-500">Airtel India</div></div></div><div class="w-5 h-5 rounded-full border-2 border-gray-300 bg-white"></div></div><div class="flex items-center justify-between p-3.5 rounded-xl border border-gray-200 bg-white hover:border-gray-300 cursor-pointer transition"><div class="flex items-center space-x-3"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlpXc0Zd0gI85fkQ4mmpBik8EYW1IG2rMjw-ywwPanUX_2d8eIGcLmbU9DGFrz-ECKgyzyNuTxv9-7JcqtKnddMgqylqHNxYO4ulBvnexepUZjjA59LhkPSlRqvxJoVA6hTG0YEIjbN1yOyt895eifa1fCaJKEUC4QnXXlCW-H4nHnD5YAEv8sVJeEO7Vl1Ar51ne8yudTNoKwWifS46x_3pAIJgAACoOW0hhkPj_5sxD1AB5_CvhkfnrDvhYBDdXQ" alt="Vi" class="w-10 h-10 object-cover rounded-full shadow-sm flex-shrink-0"><div><div class="text-[14px] font-semibold text-gray-900 leading-snug">Vodafone Idea</div><div class="text-[12px] text-gray-500">Vi India</div></div></div><div class="w-5 h-5 rounded-full border-2 border-gray-300 bg-white"></div></div><div class="flex items-center justify-between p-3.5 rounded-xl border border-gray-200 bg-white hover:border-gray-300 cursor-pointer transition"><div class="flex items-center space-x-3"><div class="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center overflow-hidden shadow-sm flex-shrink-0"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0bxAJX4zQgPA1Uhcud3YQdz-b3mh7Lr2T7_zCVaZgRKqUFdS19vVgus60EQVLTMoWPvM9aJbWXyTTRUyPtPmuMS4YEM6FfmBJqgSpMidpYBgOtqMOaEcj7busip6cVYsIM64gS77wo8nfS3BNMRBF9yot0CivhRgupdj1gNKyt1f3v4fT3KeBt4h-x0GFhUEC1Z0flRzPr_fvQ5WsEdSj51r5Cw725BgLuzG142ILqcycSjG86OJccdvgQBqFLjZx" alt="BSNL" class="w-9 h-9 object-contain"></div><div><div class="text-[14px] font-semibold text-gray-900 leading-snug">BSNL</div><div class="text-[12px] text-gray-500">Bharat Sanchar Nigam Limited</div></div></div><div class="w-5 h-5 rounded-full border-2 border-gray-300 bg-white"></div></div></div><div class="mt-4 flex items-start space-x-2 px-1 text-gray-500"></div><div class="mt-5"><button class="w-full h-12 bg-brand-teal hover:bg-brand-tealDark active:scale-[0.99] text-white font-medium text-[15px] rounded-lg flex items-center justify-center space-x-2 transition duration-150 shadow-sm" type="button"><span class="">Continue</span><svg class="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" stroke-linecap="round" stroke-linejoin="round"></path></svg></button></div></div></main>
+</div>
+<!-- END: TopBarArea -->
+<!-- BEGIN: BottomKeypadArea -->
+<div class="bg-white border-t border-gray-100 pb-2" data-purpose="numeric-keypad-container"><div class="w-full flex justify-center pt-2 pb-2" data-purpose="home-indicator"><div class="w-32 h-1 bg-black rounded-full"></div></div></div>
+<!-- END: BottomKeypadArea -->
+</div>
+<!-- END: MobileDeviceContainer -->
+
+
+
+
+
+
+
+
+
+
+</body></html>

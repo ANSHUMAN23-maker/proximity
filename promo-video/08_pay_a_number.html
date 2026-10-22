@@ -1,0 +1,204 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Pay a number - Proximity</title>
+<!-- Tailwind CSS CDN with forms and container queries plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            teal: {
+              DEFAULT: '#008479',
+              600: '#008479',
+              700: '#006e64',
+              50: '#f0fdfa'
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-layout">
+    /* Prevent text selection and replicate native iOS feel */
+    body {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    /* Blinking cursor animation */
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    .blinking-cursor {
+      animation: blink 1s step-start infinite;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-0 sm:p-4 font-sans antialiased">
+<!-- BEGIN: MobileContainer -->
+<div class="relative w-full max-w-[390px] shadow-2xl overflow-hidden flex flex-col justify-between sm:rounded-[44px] sm:border-[8px] sm:border-black" style="width: 390px; height: 840px; aspect-ratio: 390 / 840; background-image: url('https://lh3.googleusercontent.com/aida/AEtjO1WD-36YVsBImGap7eaS1Z-RKbnLEpg-oj8YG4U3_Bp7_R6jSBK0ZuuAFgAAzUMNS5YJpJO2wTNG6NnAIXcbKBdfiOVKHyYhz4BUHIsUHzrIOGcHbakMUqRj_I4TxbQ3mA9SMvKCHhYY4wlWeqwWOtuiZJZ1amC-LvuYxs3FWlLbV03I8PBhlz6Zu3PTSn03gSEzjha0vEc9QW-OvzGSDCW-I4tZwMwpw-Lhm33w5acrJTMuryq0dClR1w'); background-size: cover; background-position: center; background-repeat: no-repeat;">
+<!-- BEGIN: TopSection -->
+<div class="w-full flex flex-col">
+<!-- BEGIN: StatusBar -->
+
+<!-- END: StatusBar -->
+<!-- BEGIN: NavigationHeader -->
+<header class="px-5 pt-2 pb-4 flex items-center justify-between" data-purpose="app-navigation">
+<!-- Back Button -->
+<button aria-label="Go Back" class="p-1 -ml-1 text-gray-700 hover:text-black" type="button">
+<svg class="w-5 h-5 stroke-current stroke-[2.2]" fill="none" viewBox="0 0 24 24">
+<path d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Title -->
+<h1 class="text-sm font-semibold text-gray-900 tracking-tight">Pay a number</h1>
+<!-- Help Button -->
+<button aria-label="Help" class="p-1 -mr-1 text-gray-400 hover:text-gray-600" type="button">
+<svg class="w-5 h-5 stroke-current stroke-[1.8]" fill="none" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="9"></circle>
+<path d="M9.75 9.75a2.25 2.25 0 014.25.75c0 1.5-2 2-2 2" stroke-linecap="round" stroke-linejoin="round"></path>
+<circle cx="12" cy="16.5" fill="currentColor" r="0.75"></circle>
+</svg>
+</button>
+</header>
+<!-- END: NavigationHeader -->
+<!-- BEGIN: MainContent -->
+<main class="px-5 pt-3">
+<!-- Title & Subtitle Section -->
+<div class="space-y-1.5 mb-6">
+<h2 class="text-xl font-bold text-gray-900 tracking-tight">Who are you paying?</h2>
+<p class="text-xs leading-relaxed text-gray-500">
+            Enter their mobile number. We'll find their proximity account.
+          </p>
+</div>
+<!-- Phone Input Container -->
+<div class="space-y-2 mb-3">
+<label class="block text-xs font-normal text-gray-600">Mobile number</label>
+<div class="flex items-center border border-teal-600 rounded-lg px-3 py-2.5 bg-white shadow-sm focus-within:ring-1 focus-within:ring-teal-600">
+<!-- Country Selector -->
+<button class="flex items-center space-x-1.5 text-xs font-semibold text-gray-800 pr-2.5 focus:outline-none" type="button">
+<span class="">IN +91</span>
+<svg class="w-3 h-3 text-gray-400 stroke-current stroke-2" fill="none" viewBox="0 0 24 24">
+<path d="M19.5 8.25l-7.5 7.5-7.5-7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Vertical Separator -->
+<div class="h-4 w-px bg-gray-200 mr-3"></div>
+<!-- Value Display with Cursor -->
+<div class="flex items-center flex-1 overflow-hidden">
+<span class="text-xs text-gray-900 font-medium tracking-wide">123 456 7890</span>
+<span class="h-4 w-[1.5px] bg-teal-600 ml-1.5 blinking-cursor"></span>
+</div>
+</div>
+</div>
+<!-- Quick Action: Contacts -->
+<button class="flex items-center space-x-2 text-teal-600 text-xs font-medium hover:text-teal-700 transition-colors py-1" type="button">
+<!-- Contact Book Icon -->
+<svg class="w-4 h-4 stroke-current stroke-[1.8]" fill="none" viewBox="0 0 24 24">
+<rect height="16" rx="2" width="14" x="5" y="4"></rect>
+<path d="M9 4v16" stroke-linecap="round"></path>
+<circle cx="14" cy="10" r="1.5"></circle>
+<path d="M12 14c0-1.1 1-1.5 2-1.5s2 .4 2 1.5" stroke-linecap="round"></path>
+</svg>
+<span class="">Choose from contacts</span>
+</button>
+</main>
+<!-- END: MainContent -->
+</div>
+<!-- END: TopSection -->
+<!-- BEGIN: BottomSection -->
+<div class="w-full flex flex-col justify-end">
+<!-- Primary Action CTA Button -->
+<div class="px-5 mb-5">
+<button class="w-full bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-medium py-3 rounded-lg flex items-center justify-center space-x-2 transition-colors duration-150" type="button">
+<span class="text-xs font-semibold">Continue</span>
+<svg class="w-3.5 h-3.5 stroke-current stroke-2" fill="none" viewBox="0 0 24 24">
+<path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<!-- BEGIN: NumericKeypad -->
+<div class="grid grid-cols-3 gap-y-3 pb-4 pt-1 px-4 text-center select-none" data-purpose="custom-keypad">
+<!-- Key: 1 -->
+<button class="flex flex-col items-center justify-center py-2 active:bg-gray-100 rounded-lg transition-colors" type="button">
+<span class="text-xl font-normal text-gray-900 leading-none">1</span>
+<span class="text-[9px] font-medium text-transparent leading-tight mt-1 select-none">.</span>
+</button>
+<!-- Key: 2 -->
+<button class="flex flex-col items-center justify-center py-2 active:bg-gray-100 rounded-lg transition-colors" type="button">
+<span class="text-xl font-normal text-gray-900 leading-none">2</span>
+<span class="text-[9px] font-semibold text-gray-400 tracking-wider leading-tight mt-1">ABC</span>
+</button>
+<!-- Key: 3 -->
+<button class="flex flex-col items-center justify-center py-2 active:bg-gray-100 rounded-lg transition-colors" type="button">
+<span class="text-xl font-normal text-gray-900 leading-none">3</span>
+<span class="text-[9px] font-semibold text-gray-400 tracking-wider leading-tight mt-1">DEF</span>
+</button>
+<!-- Key: 4 -->
+<button class="flex flex-col items-center justify-center py-2 active:bg-gray-100 rounded-lg transition-colors" type="button">
+<span class="text-xl font-normal text-gray-900 leading-none">4</span>
+<span class="text-[9px] font-semibold text-gray-400 tracking-wider leading-tight mt-1">GHI</span>
+</button>
+<!-- Key: 5 -->
+<button class="flex flex-col items-center justify-center py-2 active:bg-gray-100 rounded-lg transition-colors" type="button">
+<span class="text-xl font-normal text-gray-900 leading-none">5</span>
+<span class="text-[9px] font-semibold text-gray-400 tracking-wider leading-tight mt-1">JKL</span>
+</button>
+<!-- Key: 6 -->
+<button class="flex flex-col items-center justify-center py-2 active:bg-gray-100 rounded-lg transition-colors" type="button">
+<span class="text-xl font-normal text-gray-900 leading-none">6</span>
+<span class="text-[9px] font-semibold text-gray-400 tracking-wider leading-tight mt-1">MNO</span>
+</button>
+<!-- Key: 7 -->
+<button class="flex flex-col items-center justify-center py-2 active:bg-gray-100 rounded-lg transition-colors" type="button">
+<span class="text-xl font-normal text-gray-900 leading-none">7</span>
+<span class="text-[9px] font-semibold text-gray-400 tracking-wider leading-tight mt-1">PQRS</span>
+</button>
+<!-- Key: 8 -->
+<button class="flex flex-col items-center justify-center py-2 active:bg-gray-100 rounded-lg transition-colors" type="button">
+<span class="text-xl font-normal text-gray-900 leading-none">8</span>
+<span class="text-[9px] font-semibold text-gray-400 tracking-wider leading-tight mt-1">TUV</span>
+</button>
+<!-- Key: 9 -->
+<button class="flex flex-col items-center justify-center py-2 active:bg-gray-100 rounded-lg transition-colors" type="button">
+<span class="text-xl font-normal text-gray-900 leading-none">9</span>
+<span class="text-[9px] font-semibold text-gray-400 tracking-wider leading-tight mt-1">WXYZ</span>
+</button>
+<!-- Key: + -->
+<button class="flex flex-col items-center justify-center py-2 active:bg-gray-100 rounded-lg transition-colors" type="button">
+<span class="text-xl font-normal text-gray-800 leading-none">+</span>
+<span class="text-[9px] text-transparent leading-tight mt-1 select-none">.</span>
+</button>
+<!-- Key: 0 -->
+<button class="flex flex-col items-center justify-center py-2 active:bg-gray-100 rounded-lg transition-colors" type="button">
+<span class="text-xl font-normal text-gray-900 leading-none">0</span>
+<span class="text-[9px] text-transparent leading-tight mt-1 select-none">.</span>
+</button>
+<!-- Key: Backspace -->
+<button aria-label="Delete" class="flex items-center justify-center py-2 active:bg-gray-100 rounded-lg transition-colors" type="button">
+<svg class="w-5 h-5 stroke-current stroke-[1.7] text-gray-700" fill="none" viewBox="0 0 24 24">
+<path d="M12 9.75L14.25 12m0 0l2.25 2.25M14.25 12l2.25-2.25M14.25 12L12 14.25m-2.58 4.92l-6.375-6.375a1.125 1.125 0 010-1.59L9.42 4.83c.21-.21.496-.33.795-.33H19.5A2.25 2.25 0 0121.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25H10.215a1.125 1.125 0 01-.795-.33z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<!-- END: NumericKeypad -->
+<!-- BEGIN: HomeIndicator -->
+<div class="h-6 flex justify-center items-end pb-2">
+<div class="w-32 h-1 bg-black rounded-full"></div>
+</div>
+<!-- END: HomeIndicator -->
+</div>
+<!-- END: BottomSection -->
+</div>
+<!-- END: MobileContainer -->
+
+
+
+
+</body></html>

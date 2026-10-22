@@ -428,7 +428,7 @@ private fun PhoneNumberStepScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp)
-                .pressScale(enabled = canContinue, onClick = onContinue),
+                .pressScale(enabled = canContinue),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = accent.primary,
@@ -610,7 +610,7 @@ private fun AmountStepScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp)
-                .pressScale(enabled = canReview, onClick = onReviewPayment),
+                .pressScale(enabled = canReview),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = accent.primary,

@@ -311,4 +311,11 @@
     <string name="accessibility_service_description">Reads USSD payment response dialogs to detect payment success and automatically present payment details.</string>
     <string name="accessibility_permission_title">USSD Reader</string>
     <string name="accessibility_permission_subtitle">Auto-read USSD payment dialogs</string>
+
+    <!-- USSD Accessibility Permission Dialog -->
+    <string name="ussd_accessibility_permission_title">Enable USSD Reader</string>
+    <string name="ussd_accessibility_permission_message">Proximity needs to read USSD payment dialogs from your dialer to confirm *99# payments. Please enable the \u201cProximity USSD Reader\u201d accessibility service in Settings, then return here to continue.</string>
+    <string name="ussd_accessibility_permission_cta">Open Accessibility Settings</string>
+    <string name="ussd_accessibility_permission_skip">Skip for Now</string>
+    <string name="ussd_accessibility_permission_skip_warning">Without the USSD Reader, Proximity cannot auto-detect payment results. You will need to confirm payment outcomes manually.</string>
 </resources>
