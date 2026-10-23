@@ -83,6 +83,4 @@ A signed release build requires a `keystore.properties` file in the project root
 
 ## Launch Film
 
-A 60-second launch film for the project is available at:
-
-`Proximity_Launch_Film_60s.mp4`
+![Proximity Launch Film](Proximity_Launch_Film_60s.mp4)
