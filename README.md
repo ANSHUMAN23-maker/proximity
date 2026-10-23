@@ -83,4 +83,4 @@ A signed release build requires a `keystore.properties` file in the project root
 
 ## Launch Film
 
-![Proximity Launch Film](Proximity_Launch_Film_60s.mp4)
+[Watch Proximity Launch Film (60s)](Proximity_Launch_Film_60s.mp4)
