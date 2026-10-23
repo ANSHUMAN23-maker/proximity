@@ -339,7 +339,7 @@ fun TestConfigurationScreen(
                                 context.getString(R.string.testcfg_jio_no_ussd),
                                 Toast.LENGTH_LONG
                             ).show()
-                        } else if (!ussdTestCompleted && !ussdTesting) {
+                        } else if (!ussdTesting) {
                             showUssdInstructionGuidance = true
                         }
                     }
@@ -353,7 +353,7 @@ fun TestConfigurationScreen(
                     isCompleted = upi123TestCompleted,
                     isTesting = upi123Testing,
                     onClick = {
-                        if (!upi123TestCompleted && !upi123Testing) {
+                        if (!upi123Testing) {
                             showUpi123InstructionGuidance = true
                         }
                     }

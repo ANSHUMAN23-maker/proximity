@@ -70,7 +70,6 @@ import com.proximity.app.features.qr_scanner.domain.QRCodeParser
 import com.proximity.app.features.qr_scanner.domain.messageFor
 import com.proximity.app.helpers.SetupHelper
 import com.proximity.app.helpers.TransactionDetector
-import com.proximity.app.managers.PermissionManager
 import com.proximity.app.payment.PaymentSessionManager
 import com.proximity.app.ui.theme.*
 import kotlinx.coroutines.Dispatchers
@@ -115,9 +114,8 @@ class QRScannerActivity : ComponentActivity() {
     private lateinit var cameraExecutor: ExecutorService
     private var imageAnalyzer: ImageAnalysis? = null
     private var camera: Camera? = null
-    private lateinit var permissionManager: PermissionManager
     private var isUSSDProcessActive = false
-    private var messageHandler: Handler? = null
+    private var qrCodeAnalyzer: QRCodeAnalyzer? = null
     private var smsTimeoutHandler: android.os.Handler? = null
     private var smsTimeoutRunnable: Runnable? = null
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -194,7 +192,6 @@ class QRScannerActivity : ComponentActivity() {
         }
 
         viewFinder = PreviewView(this)
-        permissionManager = PermissionManager(this)
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         LocalBroadcastManager.getInstance(this).registerReceiver(overlayDismissReceiver, IntentFilter("DISMISS_OVERLAY"))
@@ -273,7 +270,8 @@ class QRScannerActivity : ComponentActivity() {
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                     .also {
-                        it.setAnalyzer(cameraExecutor, QRCodeAnalyzer { qrCode -> processQRCode(qrCode) })
+                        qrCodeAnalyzer = QRCodeAnalyzer { qrCode -> processQRCode(qrCode) }
+                        it.setAnalyzer(cameraExecutor, qrCodeAnalyzer!!)
                     }
                 val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
                 cameraProvider.unbindAll()
@@ -287,24 +285,27 @@ class QRScannerActivity : ComponentActivity() {
     }
 
     private fun processQRCode(qrCode: String) {
-        try {
-            if (isProcessingQRCode) return
-            isProcessingQRCode = true
-            imageAnalyzer?.clearAnalyzer()
+        mainHandler.post {
+            try {
+                if (isProcessingQRCode) return@post
+                isProcessingQRCode = true
+                imageAnalyzer?.clearAnalyzer()
 
-            _uiState.update { it.copy(isProcessing = true) }
+                _uiState.update { it.copy(isProcessing = true) }
 
-            when (val result = QRCodeParser.parse(qrCode)) {
-                is QRCodeParser.ParseResult.Valid -> {
-                    initiateUSSDPayment(result.data)
+                when (val result = QRCodeParser.parse(qrCode)) {
+                    is QRCodeParser.ParseResult.Valid -> {
+                        initiateUSSDPayment(result.data)
+                    }
+                    is QRCodeParser.ParseResult.Invalid -> {
+                        showInvalidQrCode(result.reason.messageFor(this))
+                    }
                 }
-                is QRCodeParser.ParseResult.Invalid -> {
-                    showInvalidQrCode(result.reason.messageFor(this))
-                }
+                isProcessingQRCode = false
+            } catch (e: Exception) {
+                showError(getString(R.string.error_qr_processing))
+                isProcessingQRCode = false
             }
-        } catch (e: Exception) {
-            showError(getString(R.string.error_qr_processing))
-            isProcessingQRCode = false
         }
     }
 
@@ -338,14 +339,8 @@ class QRScannerActivity : ComponentActivity() {
     private fun beginQrPaymentSession(upiData: UPIData): Boolean {
         val sessionManager = ProximityApplication.from(this)?.paymentSessionManager
         val sessionTxnId = sessionManager?.begin("", upiData.amount ?: "", upiData.vpa, TransactionSource.QR)
-        return try {
-            TransactionDetector.getInstance(this).startOperation("QR_SCAN", expectedAmount = upiData.amount, sessionTxnId = sessionTxnId)
-            true
-        } catch (e: IllegalStateException) {
-            sessionManager?.onDialFailed("Could not start SMS monitoring")
-            showError(getString(R.string.error_payment_init_failed))
-            false
-        }
+        TransactionDetector.getInstance(this).startOperation("QR_SCAN", expectedAmount = upiData.amount, sessionTxnId = sessionTxnId)
+        return true
     }
 
     private fun copyVpaToClipboard(vpa: String) {
@@ -415,7 +410,6 @@ class QRScannerActivity : ComponentActivity() {
 
     private fun handleSMSReceived(intent: Intent) {
         smsTimeoutRunnable?.let { smsTimeoutHandler?.removeCallbacks(it) }
-        messageHandler?.removeCallbacksAndMessages(null)
         _uiState.update { it.copy(showBlackScreen = false) }
         setResult(RESULT_SUCCESS)
         finish()
@@ -424,7 +418,6 @@ class QRScannerActivity : ComponentActivity() {
     private fun terminateUSSDProcess() {
         try {
             isUSSDProcessActive = false
-            messageHandler?.removeCallbacksAndMessages(null)
             smsTimeoutRunnable?.let { smsTimeoutHandler?.removeCallbacks(it) }
             try {
                 TransactionDetector.getInstance(this).stopOperation()
@@ -534,9 +527,10 @@ class QRScannerActivity : ComponentActivity() {
                 camera?.cameraControl?.enableTorch(false)
                 isProcessingQRCode = false
                 hasDialedUSSD = false
+                qrCodeAnalyzer?.resetProcessing()
                 if (::cameraExecutor.isInitialized && !cameraExecutor.isShutdown) {
                     imageAnalyzer?.clearAnalyzer()
-                    imageAnalyzer?.setAnalyzer(cameraExecutor, QRCodeAnalyzer { qrCode -> processQRCode(qrCode) })
+                    qrCodeAnalyzer?.let { imageAnalyzer?.setAnalyzer(cameraExecutor, it) }
                 }
             }
         }
@@ -559,7 +553,8 @@ class QRScannerActivity : ComponentActivity() {
             if (!::cameraExecutor.isInitialized || cameraExecutor.isShutdown) return
             if (imageAnalyzer != null && !isProcessingQRCode) {
                 imageAnalyzer?.clearAnalyzer()
-                imageAnalyzer?.setAnalyzer(cameraExecutor, QRCodeAnalyzer { qrCode -> processQRCode(qrCode) })
+                qrCodeAnalyzer?.resetProcessing()
+                qrCodeAnalyzer?.let { imageAnalyzer?.setAnalyzer(cameraExecutor, it) }
             }
         } catch (e: Exception) {}
     }
@@ -569,7 +564,6 @@ class QRScannerActivity : ComponentActivity() {
             mainHandler.removeCallbacksAndMessages(null)
             try { LocalBroadcastManager.getInstance(this).sendBroadcast(Intent("APP_DESTROYED")) } catch (e: Exception) {}
             isUSSDProcessActive = false
-            messageHandler?.removeCallbacksAndMessages(null)
             smsTimeoutRunnable?.let { smsTimeoutHandler?.removeCallbacks(it) }
             isProcessingQRCode = false
             hasDialedUSSD = false

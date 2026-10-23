@@ -260,6 +260,9 @@ class TestConfigurationHelper(
         uiCallback.updateUssdConfigurationOptions(false)
         if (fromDoesNotWork) {
             SetupHelper.setUserReportedUssdNotWorking(context, true)
+            ussdTestCompleted = false
+            uiCallback.updateUssdTestCompleted(false)
+            saveTestResults(false, upi123TestCompleted)
             uiCallback.showToast(context.getString(R.string.status_scan_to_pay_disabled))
         }
     }
@@ -295,7 +298,11 @@ class TestConfigurationHelper(
             saveTestResults(ussdTestCompleted, upi123TestCompleted)
             uiCallback.showToast(context.getString(R.string.status_ussd_setup_complete))
         } else {
-            uiCallback.showToast(context.getString(R.string.status_ussd_setup_incomplete))
+            SetupHelper.setUserReportedUssdNotWorking(context, true)
+            ussdTestCompleted = false
+            uiCallback.updateUssdTestCompleted(false)
+            saveTestResults(false, upi123TestCompleted)
+            uiCallback.showToast(context.getString(R.string.status_scan_to_pay_disabled))
         }
 
         uiCallback.updateUssdConfigurationOptions(false)
