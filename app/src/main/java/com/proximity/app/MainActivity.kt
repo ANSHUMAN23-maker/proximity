@@ -652,9 +652,9 @@ fun RewardsSectionCard(
             // Title
             Text(
                 text = "Rewards & Cashback",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    color = MaterialTheme.colorScheme.onSurface
-                ),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -860,7 +860,7 @@ fun MainScreen(
                                                         context.startActivity(Intent(context, com.proximity.app.ui.activities.FaqActivity::class.java))
                                                     },
                                                     modifier = Modifier
-                                                        .size(48.dp)
+                                                        .size(38.dp)
                                                         .clip(CircleShape)
                                                         .background(MaterialTheme.colorScheme.surfaceVariant)
                                                 ) {
