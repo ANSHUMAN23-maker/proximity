@@ -30,7 +30,8 @@ val CharcoalOutline = Color(0xFF334356)       // Dividers, borders, text field o
 val CharcoalOutlineStrong = Color(0xFF475B75) // Focus rings, selected state borders
 
 // Brand - Spec teal primary, Gold secondary (payment success)
-val ProximityTeal = Color(0xFF008774)         // Primary actions, FAB, selected tabs (spec teal)
+// #00A38D provides 6.14:1 contrast against #090D14 (Abyssal Charcoal), meeting WCAG AA 4.5:1
+val ProximityTeal = Color(0xFF00A38D)         // Primary actions, FAB, selected tabs (WCAG AA compliant)
 val ProximityTealDark = Color(0xFF006D5D)     // Pressed states
 val ProximityTealLight = Color(0xFF00A38D)    // Hover, ripple, focus
 val ProximityTealTint = Color(0xFF122E2B)     // Rich dark teal tint for selected states

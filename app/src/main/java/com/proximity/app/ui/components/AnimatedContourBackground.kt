@@ -3,6 +3,7 @@
 
 package com.proximity.app.ui.components
 
+import android.provider.Settings
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -15,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -27,6 +29,13 @@ import kotlin.math.sin
 fun AnimatedContourBackground(
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val reducedMotion = Settings.Global.getFloat(
+        context.contentResolver,
+        Settings.Global.TRANSITION_ANIMATION_SCALE,
+        1f
+    ) == 0f
+
     val accent = LocalProximityAccentTheme.current
     val isDark = MaterialTheme.colorScheme.background.red < 0.2f
     val lineColor = if (isDark) {
@@ -40,7 +49,7 @@ fun AnimatedContourBackground(
         initialValue = 0f,
         targetValue = (2 * Math.PI).toFloat(),
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 18000, easing = LinearEasing),
+            animation = tween(durationMillis = if (reducedMotion) 1 else 18000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "phase"

@@ -97,7 +97,7 @@ fun Upi123InstructionDialog(
 
                         IconButton(
                             onClick = onDismiss,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,

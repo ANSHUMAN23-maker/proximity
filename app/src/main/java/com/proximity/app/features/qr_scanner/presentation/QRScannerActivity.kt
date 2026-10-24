@@ -45,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -627,6 +628,8 @@ fun ScannerOverlay(
     onFlashClick: () -> Unit,
     onGalleryClick: () -> Unit
 ) {
+    val accentColor = MaterialTheme.colorScheme.primary
+
     Box(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         // Scrim
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -644,23 +647,50 @@ fun ScannerOverlay(
                 blendMode = androidx.compose.ui.graphics.BlendMode.Clear
             )
 
-            // Draw brackets
+            // Draw rounded corner brackets (Material 3 primary teal)
             val bracketLen = 32.dp.toPx()
             val strokeWidth = 4.dp.toPx()
-            val color = Color.White
 
-            // Top Left
-            drawLine(color, Offset(rectLeft, rectTop), Offset(rectLeft + bracketLen, rectTop), strokeWidth)
-            drawLine(color, Offset(rectLeft, rectTop), Offset(rectLeft, rectTop + bracketLen), strokeWidth)
-            // Top Right
-            drawLine(color, Offset(rectLeft + rectSize, rectTop), Offset(rectLeft + rectSize - bracketLen, rectTop), strokeWidth)
-            drawLine(color, Offset(rectLeft + rectSize, rectTop), Offset(rectLeft + rectSize, rectTop + bracketLen), strokeWidth)
-            // Bottom Left
-            drawLine(color, Offset(rectLeft, rectTop + rectSize), Offset(rectLeft + bracketLen, rectTop + rectSize), strokeWidth)
-            drawLine(color, Offset(rectLeft, rectTop + rectSize), Offset(rectLeft, rectTop + rectSize - bracketLen), strokeWidth)
-            // Bottom Right
-            drawLine(color, Offset(rectLeft + rectSize, rectTop + rectSize), Offset(rectLeft + rectSize - bracketLen, rectTop + rectSize), strokeWidth)
-            drawLine(color, Offset(rectLeft + rectSize, rectTop + rectSize), Offset(rectLeft + rectSize, rectTop + rectSize - bracketLen), strokeWidth)
+            // Top Left rounded corner
+            drawArc(
+                color = accentColor,
+                startAngle = 180f,
+                sweepAngle = 90f,
+                useCenter = false,
+                topLeft = Offset(rectLeft - strokeWidth / 2f, rectTop - strokeWidth / 2f),
+                size = Size(bracketLen + strokeWidth, bracketLen + strokeWidth),
+                style = Stroke(width = strokeWidth)
+            )
+            // Top Right rounded corner
+            drawArc(
+                color = accentColor,
+                startAngle = 270f,
+                sweepAngle = 90f,
+                useCenter = false,
+                topLeft = Offset(rectLeft + rectSize - bracketLen - strokeWidth / 2f, rectTop - strokeWidth / 2f),
+                size = Size(bracketLen + strokeWidth, bracketLen + strokeWidth),
+                style = Stroke(width = strokeWidth)
+            )
+            // Bottom Left rounded corner
+            drawArc(
+                color = accentColor,
+                startAngle = 90f,
+                sweepAngle = 90f,
+                useCenter = false,
+                topLeft = Offset(rectLeft - strokeWidth / 2f, rectLeft + rectSize - bracketLen - strokeWidth / 2f),
+                size = Size(bracketLen + strokeWidth, bracketLen + strokeWidth),
+                style = Stroke(width = strokeWidth)
+            )
+            // Bottom Right rounded corner
+            drawArc(
+                color = accentColor,
+                startAngle = 0f,
+                sweepAngle = 90f,
+                useCenter = false,
+                topLeft = Offset(rectLeft + rectSize - bracketLen - strokeWidth / 2f, rectLeft + rectSize - bracketLen - strokeWidth / 2f),
+                size = Size(bracketLen + strokeWidth, bracketLen + strokeWidth),
+                style = Stroke(width = strokeWidth)
+            )
         }
 
         // Bouncing Line
@@ -778,14 +808,29 @@ fun BlackScreenOverlay(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "1. Copy VPA\n2. Paste in dialer\n3. Complete payment",
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 16.sp,
-                            lineHeight = 24.sp,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "1. Copy VPA",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                                )
+                            )
+                            Text(
+                                text = "2. Paste in dialer",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                                )
+                            )
+                            Text(
+                                text = "3. Complete payment",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                                )
+                            )
+                        }
                     }
                 }
             }

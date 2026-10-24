@@ -65,6 +65,7 @@ import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.Layers
 
 import com.proximity.app.ui.components.AnimatedContourBackground
+import com.proximity.app.ui.components.BankSelectionGrid
 import com.proximity.app.ui.components.SimOperatorLogoBadge
 import com.proximity.app.ui.components.pressScale
 import com.proximity.app.ui.theme.StatusGreen
@@ -317,7 +318,6 @@ private fun SetupFieldLabel(text: String) {
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BankSelectionSection(
     banks: List<Pair<String, String>>,
@@ -327,64 +327,15 @@ fun BankSelectionSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         SetupFieldLabel(stringResource(R.string.setup_select_bank))
-
-        var expanded by remember { mutableStateOf(false) }
-
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
-        ) {
-            TextField(
-                value = banks.find { it.first == selectedBank }?.second
-                    ?: stringResource(R.string.setup_choose_your_bank),
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(androidx.compose.material3.MenuAnchorType.PrimaryNotEditable),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    focusedTrailingIconColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurface,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                ),
-                shape = RoundedCornerShape(12.dp),
-                textStyle = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Medium),
-            )
-
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                banks.forEach { (value, label) ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                label,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontSize = 15.sp
-                            )
-                        },
-                        onClick = {
-                            onBankSelected(value)
-                            expanded = false
-                        },
-                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
-                    )
-                }
-            }
-        }
+        Spacer(modifier = Modifier.height(4.dp))
+        BankSelectionGrid(
+            banks = banks,
+            selectedBank = selectedBank,
+            onBankSelected = onBankSelected
+        )
     }
 }
 
@@ -652,9 +603,9 @@ fun CompleteSetupButton(
             Text(
                 text = text,
                 color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = (-0.3).sp
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    letterSpacing = (-0.3).sp
+                )
             )
             if (showArrow) {
                 Spacer(modifier = Modifier.width(8.dp))
@@ -722,7 +673,7 @@ fun PermissionsSection(
         Text(
             text = "Proximity needs these permissions to automatically and securely make USSD payments for you.",
             color = Color.White.copy(alpha = 0.8f),
-            fontSize = 15.sp,
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
@@ -981,8 +932,9 @@ fun WelcomeSection(
                 Text(
                     text = "Continue",
                     color = if (termsAccepted) MaterialTheme.colorScheme.onPrimary else disabledText,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Medium
+                    )
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Icon(

@@ -1,5 +1,6 @@
 package com.proximity.app.ui.activities
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -115,6 +117,19 @@ fun PayContactFlowScreen(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) showContactPicker = true
+    }
+
+    // Clipboard paste detection: auto-fill 10-digit Indian numbers
+    val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+    LaunchedEffect(Unit) {
+        val primaryClip = clipboardManager.primaryClip
+        if (primaryClip != null && primaryClip.itemCount > 0) {
+            val clipboardText = primaryClip.getItemAt(0)?.text?.toString() ?: ""
+            val digits = clipboardText.filter { it.isDigit() }
+            if (digits.length == 10) {
+                phoneNumber = digits
+            }
+        }
     }
 
     BackHandler {
@@ -400,7 +415,11 @@ private fun PhoneNumberStepScreen(
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
                 .clickable { onSelectContactClick() }
-                .padding(vertical = 4.dp, horizontal = 4.dp),
+                .padding(vertical = 4.dp, horizontal = 4.dp)
+                .semantics {
+                    role = Role.Button
+                    contentDescription = "Choose from contacts"
+                },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -472,7 +491,6 @@ private fun AmountStepScreen(
     val accent = LocalProximityAccentTheme.current
     val focusRequester = remember { FocusRequester() }
     val isOverCap = (amount.toLongOrNull() ?: 0L) > AppConstants.UPI123PAY_MAX_AMOUNT.toLong()
-
     LaunchedEffect(Unit) {
         delay(150)
         focusRequester.requestFocus()
@@ -549,11 +567,42 @@ private fun AmountStepScreen(
         ) {
             Text(
                 text = "Enter the Amount:",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(8.dp))
+
+            // Quick amount chips
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("100", "500", "1000", "2000").forEach { chipAmount ->
+                    val chipSelected = amount == chipAmount
+                    Button(
+                        onClick = { onAmountChange(chipAmount) },
+                        modifier = Modifier
+                            .widthIn(min = 72.dp)
+                            .height(40.dp)
+                            .pressScale(enabled = true),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (chipSelected) accent.primary
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            contentColor = if (chipSelected) Color.White
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) {
+                        Text(
+                            text = "\u20B9$chipAmount",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = if (chipSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Display styled CurrencyText
             CurrencyText(
@@ -563,7 +612,7 @@ private fun AmountStepScreen(
                 color = if (isOverCap) ProximityStatusError else MaterialTheme.colorScheme.onBackground
             )
 
-            // Transparent TextField overlaid to capture native system number pad inputs
+            // Native system number pad input with accessible touch target
             BasicTextField(
                 value = amount,
                 onValueChange = { input ->
@@ -573,8 +622,14 @@ private fun AmountStepScreen(
                     }
                 },
                 modifier = Modifier
-                    .size(1.dp)
-                    .focusRequester(focusRequester),
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(horizontal = 16.dp)
+                    .focusRequester(focusRequester)
+                    .semantics {
+                        role = Role.Button
+                        contentDescription = "Amount input. Enter up to \${AppConstants.UPI123PAY_MAX_AMOUNT} rupees."
+                    },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number,
                     imeAction = ImeAction.Done
@@ -595,7 +650,10 @@ private fun AmountStepScreen(
                     text = Upi123CallStringBuilder.Reason.AMOUNT_ABOVE_CAP.messageFor(context),
                     color = ProximityStatusError,
                     fontSize = 12.sp,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics {
+                        error(Upi123CallStringBuilder.Reason.AMOUNT_ABOVE_CAP.messageFor(context))
+                    }
                 )
             }
         }

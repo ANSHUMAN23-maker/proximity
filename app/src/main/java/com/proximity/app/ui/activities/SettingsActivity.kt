@@ -29,6 +29,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -43,6 +44,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.proximity.app.BuildConfig
 import com.proximity.app.ProximityApplication
 import com.proximity.app.R
+import com.proximity.app.ui.components.BankSelectionGrid
 import com.proximity.app.ui.components.SimOperatorLogoBadge
 import com.proximity.app.ui.components.pressScale
 import com.proximity.app.SetupActivity
@@ -284,7 +286,7 @@ fun SettingsScreen(
                             icon = Icons.Default.AccountBalance,
                             title = "Bank",
                             value = state.selectedBank.name,
-                            onClick = null
+                            onClick = { showBankPicker = true }
                         )
                         GroupDivider()
                         SettingsRow(
@@ -629,7 +631,10 @@ private fun SettingsRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick).semantics {
+                role = Role.Button
+                contentDescription = title
+            } else Modifier)
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -839,72 +844,50 @@ private fun BankPickerDialog(
     onBankSelected: (Bank) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val accent = LocalProximityAccentTheme.current
-
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(4.dp),
-            color = MaterialTheme.colorScheme.surface
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
         ) {
             Column(
-                modifier = Modifier.padding(vertical = 20.dp)
+                modifier = Modifier
+                    .padding(20.dp)
+                    .heightIn(max = 520.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
-                Text(
-                    text = "Select Bank",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                )
-
-                LazyColumn(
-                    modifier = Modifier.heightIn(max = 400.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(banks) { bank ->
-                        val isSelected = bank.id == selectedBank.id
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onBankSelected(bank) }
-                                .padding(horizontal = 20.dp, vertical = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = bank.name,
-                                fontSize = 15.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                color = if (isSelected) accent.primary else MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.weight(1f)
-                            )
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Selected",
-                                    tint = accent.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                        if (bank != banks.last()) {
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outlineVariant,
-                                thickness = 0.5.dp,
-                                modifier = Modifier.padding(horizontal = 20.dp)
-                            )
-                        }
+                    Text(
+                        text = "Select Bank",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .padding(horizontal = 12.dp)
-                ) {
-                    Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                BankSelectionGrid(
+                    banks = banks.map { it.id to it.name },
+                    selectedBank = selectedBank.id,
+                    onBankSelected = { bankId ->
+                        val matched = banks.find { it.id == bankId } ?: banks.first()
+                        onBankSelected(matched)
+                    }
+                )
             }
         }
     }

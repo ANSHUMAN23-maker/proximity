@@ -42,7 +42,8 @@ private data class ConfettiParticle(
 fun SmoothCheckmarkAnimation(
     modifier: Modifier = Modifier,
     circleColor: Color = LocalProximityAccentTheme.current.primary,
-    checkmarkColor: Color = Color.White
+    checkmarkColor: Color = Color.White,
+    showBurst: Boolean = false
 ) {
     val progress = remember { Animatable(0f) }
     val burstProgress = remember { Animatable(0f) }
@@ -76,7 +77,7 @@ fun SmoothCheckmarkAnimation(
             )
         }
         launch {
-            burstProgress.animateTo(
+            if (showBurst) burstProgress.animateTo(
                 targetValue = 1f,
                 animationSpec = tween(durationMillis = 950, easing = FastOutSlowInEasing)
             )
@@ -89,7 +90,7 @@ fun SmoothCheckmarkAnimation(
             val circleRadius = 44.dp.toPx()
 
             // 1. Draw Colour Bomb / Confetti Explosion
-            if (burstProgress.value > 0f) {
+            if (showBurst && burstProgress.value > 0f) {
                 val pVal = burstProgress.value
                 val alpha = (1f - pVal).coerceIn(0f, 1f)
 
