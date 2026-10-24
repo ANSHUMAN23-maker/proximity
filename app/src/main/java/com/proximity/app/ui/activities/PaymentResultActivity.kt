@@ -270,7 +270,7 @@ fun PaymentResultScreen(intent: Intent, onDone: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp)
-                        .pressScale(),
+                        .pressScale(onClick = onDone),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = accent.primary)
                 ) {

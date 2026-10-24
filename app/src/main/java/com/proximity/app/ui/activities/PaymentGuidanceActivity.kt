@@ -163,7 +163,7 @@ fun PaymentGuidanceScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp)
-                        .pressScale(),
+                        .pressScale(onClick = onProceed),
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(containerColor = accent.primary)
                 ) {

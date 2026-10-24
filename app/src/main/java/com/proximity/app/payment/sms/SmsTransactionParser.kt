@@ -40,13 +40,13 @@ object SmsTransactionParser {
             "(?:\\s+(?:via|@|on|for)\\b|\\s+(?:$NAME_STOP_WORDS)\\b|\\.|,|;|$)",
 
         // Pattern for "Payment to NAME of Rs"
-        "Payment\\s+to\\s+([a-zA-Z][a-zA-Z\\s\\.]+?)\\s+(?:of|for)\\s+(?:Rs\\.?|INR|\\u20B9)",
+        "Payment\\s+to\\s+([a-zA-Z][a-zA-Z\\s\\.]+?)\\s+(?:of|for)\\s+(?:Rs\\.?|INR|\u20B9)",
 
         // Pattern for "NAME - amount debited"
-        "([a-zA-Z][a-zA-Z\\s\\.]+?)\\s*[—–]\\s*(?:Rs\\.?|INR|\\u20B9)",
+        "([a-zA-Z][a-zA-Z\\s\\.]+?)\\s*[-â€“]\\s*(?:Rs\\.?|INR|\u20B9)",
 
         // Additional patterns for common formats
-        "(?:Rs\\.?|INR|\\u20B9)\\s*[0-9,]+(?:\\.[0-9]{2})?\\s+(?:sent|paid|transferred)\\s+to\\s+" +
+        "(?:Rs\\.?|INR|\u20B9)\\s*[0-9,]+(?:\\.[0-9]{2})?\\s+(?:sent|paid|transferred)\\s+to\\s+" +
             "([a-zA-Z][a-zA-Z\\s\\.]+?)$NAME_TERMINATOR",
         "\\bto\\s+([a-zA-Z][a-zA-Z\\s\\.]{2,40}?)$NAME_TERMINATOR",
 
@@ -67,7 +67,7 @@ object SmsTransactionParser {
         "from\\s+([a-zA-Z][a-zA-Z\\s\\.]+?)\\s+(?:via|@)",
 
         // Additional pattern for credit messages
-        "(?:Rs\\.?|INR|\\u20B9)\\s*[0-9,]+(?:\\.[0-9]{2})?\\s+(?:received|credited)\\s+from\\s+" +
+        "(?:Rs\\.?|INR|\u20B9)\\s*[0-9,]+(?:\\.[0-9]{2})?\\s+(?:received|credited)\\s+from\\s+" +
             "([a-zA-Z][a-zA-Z\\s\\.]+?)$NAME_TERMINATOR",
 
         "\\bfrom\\s+([a-zA-Z][a-zA-Z\\s\\.]{2,40}?)$NAME_TERMINATOR",
@@ -138,9 +138,9 @@ object SmsTransactionParser {
 
     // Amount patterns - multiple formats
     private val AMOUNT_PATTERNS = listOf(
-        "(?:Rs\\.?|INR|\\u20B9)\\s*([0-9,]+(?:\\.[0-9]{1,2})?)",
-        "amount\\s*(?:of)?\\s*(?:Rs\\.?|INR|\\u20B9)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)",
-        "([0-9,]+(?:\\.[0-9]{1,2})?)\\s*(?:Rs\\.?|INR|\\u20B9)"
+        "(?:Rs\\.?|INR|\u20B9)\\s*([0-9,]+(?:\\.[0-9]{1,2})?)",
+        "amount\\s*(?:of)?\\s*(?:Rs\\.?|INR|\u20B9)?\\s*([0-9,]+(?:\\.[0-9]{1,2})?)",
+        "([0-9,]+(?:\\.[0-9]{1,2})?)\\s*(?:Rs\\.?|INR|\u20B9)"
     )
 
     fun parse(
@@ -304,7 +304,7 @@ object SmsTransactionParser {
             if (match != null && match.groups.size > 1) {
                 val baseId = match.groups[1]?.value
                 if (!baseId.isNullOrEmpty()) {
-                    return "${baseId}_${clock()}"
+                    return baseId
                 }
             }
         }
@@ -332,10 +332,10 @@ object SmsTransactionParser {
      * DEBIT (money left the user's account) or CREDIT (money arrived).
      *
      * A debit verb wins over a credit word: ICICI/Union-style templates name
-     * both sides of the same payment ("Acct XX556 debited for Rs 500.00 — KIRANA STORE credited"),
-     * and reading those as CREDIT would classify our own outgoing confirmation
-     * as somebody else's incoming money — the pipeline then drops it as unrelated
-     * and the payment never appears.
+     * both sides of the same payment ("Acct XX556 debited for Rs 500.00 â€¦;
+     * KIRANA STORE credited"), and reading those as CREDIT would classify
+     * our own outgoing confirmation as somebody else's incoming money — the
+     * pipeline then drops it as unrelated and the payment never appears.
      */
     internal fun detectTransactionType(body: String): String {
         val bodyLower = body.lowercase(Locale.getDefault())
@@ -455,8 +455,13 @@ object SmsTransactionParser {
             else -> "debited"
         }
         return buildString {
-            append("\\u20B9").append(amount).append(" ").append(verb)
-            if (bankName.isNotBlank()) append(" \\u2014 ").append(bankName)
+            append("\u20B9").append(amount).append(" ").append(verb)
+            if (bankName.isNotBlank()) append(" \u2014 ").append(bankName)
         }
     }
 }
+
+
+
+
+

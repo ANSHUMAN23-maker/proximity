@@ -171,8 +171,7 @@ class SettingsViewModel : androidx.lifecycle.ViewModel() {
                 Settings.canDrawOverlays(context)
             } else {
                 true
-            }),
-            "accessibility" to com.proximity.app.utils.UssdAccessibilityUtils.isAccessibilityServiceEnabled(context)
+            })
         )
         state = state.copy(permissions = perms)
     }
@@ -233,11 +232,7 @@ fun SettingsScreen(
     // Dialog states
     var showBankPicker by remember { mutableStateOf(false) }
     var showSimPicker by remember { mutableStateOf(false) }
-    var showUssdStatusDialog by remember { mutableStateOf(false) }
     var showClearDataConfirm by remember { mutableStateOf(false) }
-    var userReportedUssdNotWorking by remember {
-        mutableStateOf(com.proximity.app.helpers.SetupHelper.hasUserReportedUssdNotWorking(context))
-    }
 
     Box(
         modifier = Modifier
@@ -292,23 +287,6 @@ fun SettingsScreen(
                             title = "Primary SIM",
                             value = primarySim,
                             onClick = { showSimPicker = true }
-                        )
-                        GroupDivider()
-                        SettingsRow(
-                            icon = Icons.Default.QrCodeScanner,
-                            title = "Scan to Pay (*99#)",
-                            value = when {
-                                primarySimId == "jio" -> "Unavailable (Jio)"
-                                userReportedUssdNotWorking -> "Disabled (Invalid MMI)"
-                                else -> "Enabled (*99# USSD)"
-                            },
-                            onClick = {
-                                if (primarySimId == "jio") {
-                                    android.widget.Toast.makeText(context, R.string.testcfg_jio_no_ussd, android.widget.Toast.LENGTH_LONG).show()
-                                } else {
-                                    showUssdStatusDialog = true
-                                }
-                            }
                         )
                     }
                 }
@@ -392,16 +370,6 @@ fun SettingsScreen(
                                 }
                             }
                         )
-                        GroupDivider()
-                        PermissionRow(
-                            icon = Icons.Default.Accessibility,
-                            title = stringResource(R.string.accessibility_permission_title),
-                            subtitle = stringResource(R.string.accessibility_permission_subtitle),
-                            granted = state.permissions["accessibility"] ?: false,
-                            onRequest = {
-                                com.proximity.app.utils.UssdAccessibilityUtils.openAccessibilitySettings(context)
-                            }
-                        )
                     }
                 }
                 item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -453,64 +421,9 @@ fun SettingsScreen(
                 primarySimId = simId
                 context.getSharedPreferences("ProximityPrefs", Context.MODE_PRIVATE)
                     .edit().putString("selected_primary_sim", simId).apply()
-                com.proximity.app.helpers.SetupHelper.clearUserReportedUssdNotWorking(context)
-                userReportedUssdNotWorking = false
                 showSimPicker = false
             },
             onDismiss = { showSimPicker = false }
-        )
-    }
-
-    // USSD Status Dialog
-    if (showUssdStatusDialog) {
-        AlertDialog(
-            onDismissRequest = { showUssdStatusDialog = false },
-            containerColor = MaterialTheme.colorScheme.surface,
-            titleContentColor = MaterialTheme.colorScheme.onSurface,
-            textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            title = {
-                Text(
-                    "Scan to Pay / USSD (*99#)",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 18.sp
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        "If *99# USSD returns 'Invalid MMI code' or fails on your $primarySim SIM, " +
-                            "you can mark USSD as disabled to use non-USSD payment options.",
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp
-                    )
-                    Text(
-                        "Current Status: " + if (userReportedUssdNotWorking) "Disabled (USSD not working)" else "Enabled (*99# active)",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (userReportedUssdNotWorking) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val newState = !userReportedUssdNotWorking
-                    com.proximity.app.helpers.SetupHelper.setUserReportedUssdNotWorking(context, newState)
-                    userReportedUssdNotWorking = newState
-                    showUssdStatusDialog = false
-                    val msg = if (newState) "Scan to pay disabled for this SIM" else "Scan to pay enabled"
-                    android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
-                }) {
-                    Text(if (userReportedUssdNotWorking) "Enable USSD" else "Mark as Not Working (Invalid MMI)")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showUssdStatusDialog = false
-                    context.startActivity(Intent(context, com.proximity.app.TestConfigurationActivity::class.java))
-                }) {
-                    Text("Re-Test USSD")
-                }
-            }
         )
     }
 

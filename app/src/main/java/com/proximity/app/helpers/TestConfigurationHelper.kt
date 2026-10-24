@@ -9,10 +9,12 @@ import com.proximity.app.R
 import com.proximity.app.constants.AppConstants
 import com.proximity.app.data.TestResults
 import com.proximity.app.data.TestResultsManager
+import com.proximity.app.accessibility.UssdAccessibilityService
+import com.proximity.app.accessibility.UssdAccessibilityResult
+import com.proximity.app.accessibility.UssdStatus
 import com.proximity.app.managers.CallManager
 import com.proximity.app.managers.CallType
 import com.proximity.app.managers.PermissionManager
-import com.proximity.app.utils.UssdAccessibilityUtils
 
 
 class TestConfigurationHelper(
@@ -47,6 +49,8 @@ class TestConfigurationHelper(
     private var showUpi123ConfigurationOptions = false
     private var ussdProgressMessage = "Initializing..."
     private var showUssdConfigurationOptions = false
+    private var ussdAccessibilityResult: UssdAccessibilityResult? = null
+    private var showUssdAccessibilityConfirm = false
 
     interface UICallback {
         fun showToast(message: String)
@@ -67,11 +71,33 @@ class TestConfigurationHelper(
 
         fun requestPhonePermissions()
 
-        /**
-         * Invoked when the user acknowledges the accessibility permission prompt
-         * and the app should re-check whether the USSD accessibility service is enabled.
-         */
-        fun onAccessibilityAcknowledged()
+        /** Called when accessibility detects a USSD payment result */
+        fun onUssdAccessibilityDetected(result: UssdAccessibilityResult)
+    }
+
+    /** Sets the accessibility callback for USSD payment detection */
+    fun setUssdAccessibilityCallback(callback: ((UssdAccessibilityResult) -> Unit)?) {
+        UssdAccessibilityService.ussdCallback = callback
+    }
+
+    /** Enables or disables USSD accessibility detection mode */
+    fun enableUssdAccessibility(enable: Boolean) {
+        UssdAccessibilityService.ussdPaymentActive = enable
+        Log.d(TAG, "USSD accessibility set to: $enable")
+    }
+
+    /** Handles an accessibility-detected USSD payment result */
+    fun handleUssdAccessibilityResult(result: UssdAccessibilityResult) {
+        Log.d(TAG, "USSD accessibility result: ${result.status}, amount=${result.amount}, ref=${result.reference}")
+        // Disable accessibility since we have a result
+        enableUssdAccessibility(false)
+
+        // Store the result for the UI to pick up
+        ussdAccessibilityResult = result
+        showUssdAccessibilityConfirm = true
+
+        // Notify the UI callback
+        uiCallback.onUssdAccessibilityDetected(result)
     }
 
     fun initialize() {
@@ -105,14 +131,6 @@ class TestConfigurationHelper(
             return
         }
 
-        // USSD requires the accessibility service to read dialer responses.
-        // Check before dialing *99#; if not enabled, prompt the user first.
-        if (callType == CallType.USSD && !UssdAccessibilityUtils.isAccessibilityServiceEnabled(context)) {
-            Log.d(TAG, "Accessibility service not enabled for USSD - showing permission prompt")
-            uiCallback.onAccessibilityAcknowledged()
-            return
-        }
-
         if (!permissionManager.hasPhonePermissions()) {
             Log.e(TAG, "Phone permissions not granted")
             uiCallback.showToast(context.getString(R.string.error_call_permission_required_ussd))
@@ -137,6 +155,8 @@ class TestConfigurationHelper(
                 uiCallback.updateUssdTesting(true)
                 uiCallback.updateUssdDialog(true)
                 uiCallback.updateUssdProgressMessage(ussdProgressMessage)
+                // Enable accessibility for USSD dialog detection
+                enableUssdAccessibility(true)
                 Log.d(TAG, "USSD state set - ussdTesting: $ussdTesting, showUssdDialog: $showUssdDialog")
             }
             CallType.VOICE -> {
@@ -202,20 +222,6 @@ class TestConfigurationHelper(
         )
     }
 
-    /**
-     * Re-check accessibility after the user has been prompted to enable it.
-     * If now enabled, proceed with the USSD dial; otherwise inform the user.
-     */
-    fun retryUssdAfterAccessibility() {
-        if (UssdAccessibilityUtils.isAccessibilityServiceEnabled(context)) {
-            Log.d(TAG, "Accessibility now enabled - proceeding with USSD dial")
-            initiateCall(CallType.USSD)
-        } else {
-            Log.w(TAG, "Accessibility still not enabled - USSD cannot be auto-read")
-            uiCallback.showToast(context.getString(R.string.ussd_accessibility_permission_skip_warning))
-        }
-    }
-
 
     private fun cancelUssdTimeout() {
         ussdTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
@@ -258,11 +264,10 @@ class TestConfigurationHelper(
         uiCallback.updateUssdTesting(false)
         uiCallback.updateUssdDialog(false)
         uiCallback.updateUssdConfigurationOptions(false)
+        // Disable accessibility when USSD dialog is dismissed
+        enableUssdAccessibility(false)
         if (fromDoesNotWork) {
             SetupHelper.setUserReportedUssdNotWorking(context, true)
-            ussdTestCompleted = false
-            uiCallback.updateUssdTestCompleted(false)
-            saveTestResults(false, upi123TestCompleted)
             uiCallback.showToast(context.getString(R.string.status_scan_to_pay_disabled))
         }
     }
@@ -288,6 +293,8 @@ class TestConfigurationHelper(
         showUssdConfigurationOptions = false
         showUssdDialog = false
         ussdTesting = false
+        // Disable accessibility when USSD configuration is confirmed/dismissed
+        enableUssdAccessibility(false)
 
         if (configured) {
             SetupHelper.setUserReportedUssdNotWorking(context, false)
@@ -298,11 +305,7 @@ class TestConfigurationHelper(
             saveTestResults(ussdTestCompleted, upi123TestCompleted)
             uiCallback.showToast(context.getString(R.string.status_ussd_setup_complete))
         } else {
-            SetupHelper.setUserReportedUssdNotWorking(context, true)
-            ussdTestCompleted = false
-            uiCallback.updateUssdTestCompleted(false)
-            saveTestResults(false, upi123TestCompleted)
-            uiCallback.showToast(context.getString(R.string.status_scan_to_pay_disabled))
+            uiCallback.showToast(context.getString(R.string.status_ussd_setup_incomplete))
         }
 
         uiCallback.updateUssdConfigurationOptions(false)
@@ -443,7 +446,9 @@ class TestConfigurationHelper(
             ussdProgressMessage = ussdProgressMessage,
             showUssdConfigurationOptions = showUssdConfigurationOptions,
             showUpi123Dialog = showUpi123Dialog,
-            showUpi123ConfigurationOptions = showUpi123ConfigurationOptions
+            showUpi123ConfigurationOptions = showUpi123ConfigurationOptions,
+            ussdAccessibilityResult = ussdAccessibilityResult,
+            showUssdAccessibilityConfirm = showUssdAccessibilityConfirm
         )
     }
 
@@ -460,6 +465,8 @@ class TestConfigurationHelper(
         val ussdProgressMessage: String,
         val showUssdConfigurationOptions: Boolean,
         val showUpi123Dialog: Boolean,
-        val showUpi123ConfigurationOptions: Boolean
+        val showUpi123ConfigurationOptions: Boolean,
+        val ussdAccessibilityResult: UssdAccessibilityResult? = null,
+        val showUssdAccessibilityConfirm: Boolean = false
     )
 }

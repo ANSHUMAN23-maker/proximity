@@ -32,7 +32,7 @@ import com.proximity.app.utils.CurrencyFormat
 fun Modifier.pressScale(
     enabled: Boolean = true,
     scaleDown: Float = 0.96f,
-    onClick: (() -> Unit)? = null
+    onClick: () -> Unit
 ): Modifier {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -45,21 +45,17 @@ fun Modifier.pressScale(
         label = "pressScale"
     )
 
-    val scaledModifier = this.graphicsLayer {
-        scaleX = scale
-        scaleY = scale
-    }
-
-    return if (onClick != null) {
-        scaledModifier.clickable(
+    return this
+        .graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
+        .clickable(
             interactionSource = interactionSource,
             indication = null,
             enabled = enabled,
             onClick = onClick
         )
-    } else {
-        scaledModifier
-    }
 }
 
 /**

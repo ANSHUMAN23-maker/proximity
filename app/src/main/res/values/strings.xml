@@ -307,15 +307,13 @@
     <string name="recharge_action_browser">Open in Chrome</string>
 
     <!-- USSD Accessibility Service -->
-    <string name="accessibility_service_label">Proximity USSD Reader</string>
-    <string name="accessibility_service_description">Reads USSD payment response dialogs to detect payment success and automatically present payment details.</string>
-    <string name="accessibility_permission_title">USSD Reader</string>
-    <string name="accessibility_permission_subtitle">Auto-read USSD payment dialogs</string>
-
-    <!-- USSD Accessibility Permission Dialog -->
-    <string name="ussd_accessibility_permission_title">Enable USSD Reader</string>
-    <string name="ussd_accessibility_permission_message">Proximity needs to read USSD payment dialogs from your dialer to confirm *99# payments. Please enable the \u201cProximity USSD Reader\u201d accessibility service in Settings, then return here to continue.</string>
-    <string name="ussd_accessibility_permission_cta">Open Accessibility Settings</string>
-    <string name="ussd_accessibility_permission_skip">Skip for Now</string>
-    <string name="ussd_accessibility_permission_skip_warning">Without the USSD Reader, Proximity cannot auto-detect payment results. You will need to confirm payment outcomes manually.</string>
+    <string name="ussd_accessibility_service_description">Reads the USSD payment dialog box during an active USSD payment session to detect payment success and record the transaction in history.</string>
+    <string name="ussd_accessibility_detecting_title">Reading USSD payment dialog…</string>
+    <string name="ussd_accessibility_payment_found_title">USSD Payment Detected</string>
+    <string name="ussd_accessibility_payment_found_body">The USSD dialog shows a successful payment. Confirm to save to transaction history.</string>
+    <string name="ussd_accessibility_confirm_button">I\'ve completed it</string>
+    <string name="ussd_accessibility_cancel_button">Cancel</string>
+    <string name="ussd_accessibility_no_payment">No payment confirmation found in USSD dialog.</string>
+    <string name="ussd_accessibility_not_enabled">Accessibility Service not enabled. Please enable it in Settings to confirm USSD payments.</string>
+    <string name="ussd_accessibility_settings">Open Accessibility Settings</string>
 </resources>

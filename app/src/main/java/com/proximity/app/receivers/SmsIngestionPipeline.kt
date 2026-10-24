@@ -91,26 +91,6 @@ object SmsIngestionPipeline {
     internal fun isUnrelatedIncomingCredit(recordTxnId: String?, parsed: SimpleTransaction): Boolean =
         recordTxnId == null && parsed.transactionType == "CREDIT"
 
-    /**
-     * SMS ingestion for recharge confirmation without a payment session.
-     * Used by RechargeWebActivity as a fallback when URL-based detection fails.
-     */
-    suspend fun ingestSmsOnly(context: Context, sender: String, body: String): SimpleTransaction? {
-        val transaction = TransactionDetector.getInstance(context).processSMS(sender, body)
-        if (transaction == null) {
-            Log.d(TAG, "Not a transaction SMS (recharge fallback)")
-            return null
-        }
-
-        // Save the recharge transaction to the database
-        runCatching {
-            TransactionRepository.getInstance(context).saveTransaction(transaction)
-        }.onFailure { Log.e(TAG, "Failed to save recharge transaction", it) }
-
-        Log.d(TAG, "Recharge SMS confirmed: ${transaction.transactionId} status=${transaction.status}")
-        return transaction
-    }
-
     private suspend fun adoptOrphanedRow(
         context: Context,
         txnId: String,

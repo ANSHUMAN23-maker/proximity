@@ -65,9 +65,9 @@ class TransactionDetector private constructor(context: Context) {
             putBoolean(KEY_ACTIVE, true)
             putLong(KEY_START_TIME, System.currentTimeMillis())
             putString(KEY_OPERATION_TYPE, operationType)
-            if (expectedAmount != null) putString(KEY_EXPECTED_AMOUNT, expectedAmount) else remove(KEY_EXPECTED_AMOUNT)
-            if (phoneNumber != null) putString(KEY_PHONE_NUMBER, phoneNumber) else remove(KEY_PHONE_NUMBER)
-            if (sessionTxnId != null) putString(KEY_SESSION_TXN_ID, sessionTxnId) else remove(KEY_SESSION_TXN_ID)
+            expectedAmount?.let { putString(KEY_EXPECTED_AMOUNT, it) }
+            phoneNumber?.let { putString(KEY_PHONE_NUMBER, it) }
+            sessionTxnId?.let { putString(KEY_SESSION_TXN_ID, it) }
             apply()
         }
     }

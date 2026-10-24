@@ -37,7 +37,7 @@ class SmsParsingRegexTest {
     }
 
     @Test
-    fun `SBI USSD-style SMS — large amount with commas`() {
+    fun `SBI USSD-style SMS â€” large amount with commas`() {
         val sender = "BP-SBIINB"
         val body = "Rs 12,000 debited from your SBI A/c via UPI 9876543210 on 20/05/26. Ref: 123456789"
         assertEquals("State Bank of India", SmsTransactionParser.detectBank(sender, body))
@@ -47,7 +47,7 @@ class SmsParsingRegexTest {
     @Test
     fun `Axis Bank with rupee symbol`() {
         val sender = "AX-AXISBK"
-        val body = "\u20B9 250.00 paid to merchant from Axis Bank A/c. UPI Ref: 99887766"
+        val body = "â‚¹ 250.00 paid to merchant from Axis Bank A/c. UPI Ref: 99887766"
         assertEquals("Axis Bank", SmsTransactionParser.detectBank(sender, body))
         assertEquals("250.00", SmsTransactionParser.extractAmount(body))
     }
@@ -61,7 +61,7 @@ class SmsParsingRegexTest {
     }
 
     @Test
-    fun `Promotional SMS — not detected as a bank transaction`() {
+    fun `Promotional SMS â€” not detected as a bank transaction`() {
         // Sender/body deliberately avoid the DLT-shaped fallback (see the
         // dedicated fallback tests below) and any BANK_KEYWORDS substring â€”
         // "YES" would collide with Yes Bank ("Reply YES to enter" is a
@@ -104,14 +104,13 @@ class SmsParsingRegexTest {
     }
 
     // ---------------------------------------------------------------------
-    // Sender fallback — locks in the DLT-shaped fallback contract after
+    // Sender fallback â€” locks in the DLT-shaped fallback contract after
     // dropping the blanket `sender.length == 6` check.
     // ---------------------------------------------------------------------
 
     @Test
     fun `DLT-shaped senders match the generic bank fallback`() {
         // Headers shaped like real DLT bank senders, for banks NOT in the
-        // keyword map (a keyword match would win before the fallback).
         // keyword map (a keyword match would win before the fallback).
         val body = "Rs 100 debited via UPI. Ref 123456789012"
         assertEquals("Bank", SmsTransactionParser.detectBank("VK-DBSBNK", body)) // alphanumeric DLT header

@@ -16,4 +16,5 @@ object TransactionSource {
     const val NOTIFICATION = "NOTIFICATION"
     const val MANUAL = "MANUAL"
     const val QR = "QR"
+    const val USSD = "USSD"
 }

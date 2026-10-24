@@ -329,15 +329,11 @@ class PaymentSessionManager(
         }
     }
 
-    /**
-     * Called when the user indicates a USSD call has completed (e.g. from QR scanner).
-     * Transitions to WaitingForVerification without synthesizing call duration;
-     * the actual USSD response must still arrive via UssdAccessibilityService or SMS.
-     */
-    fun onUssdCallCompleted() {
+    fun onUssdCallEndedManually() {
         synchronized(sessionLock) {
             val s = _paymentState.value
             if (s is PaymentState.Initiating) {
+                // Synthesize the missing InProgress state
                 _paymentState.value = PaymentState.InProgress(
                     step = "USSD Call Completed",
                     progress = 1.0f,
@@ -348,16 +344,7 @@ class PaymentSessionManager(
                 )
             }
         }
-        val current = _paymentState.value
-        if (current is PaymentState.InProgress) {
-            _paymentState.value = PaymentState.WaitingForVerification(
-                timeout = verificationDeadlineMs,
-                phoneNumber = current.phoneNumber,
-                amount = current.amount,
-                transactionId = current.transactionId,
-                upiId = current.upiId
-            )
-        }
+        onCallSessionEvent(com.proximity.app.telephony.CallSessionEvent.Ended(durationMs = 10000L)) // fake duration
     }
 
     private fun onVerificationDeadline() {

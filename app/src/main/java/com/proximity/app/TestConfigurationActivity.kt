@@ -22,7 +22,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.CompositionLocalProvider
@@ -40,6 +39,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.proximity.app.accessibility.UssdAccessibilityResult
+import com.proximity.app.accessibility.UssdStatus
 import com.proximity.app.constants.PermissionConstants
 import com.proximity.app.helpers.SetupHelper
 import com.proximity.app.helpers.TestConfigurationHelper
@@ -66,7 +67,10 @@ import kotlinx.coroutines.delay
 
 class TestConfigurationActivity : ComponentActivity() {
     private lateinit var testHelper: TestConfigurationHelper
-    private var showUssdAccessibilityDialog = false
+
+    // USSD accessibility payment detection state (shared between callback and composable)
+    private var ussdAccessibilityResult: UssdAccessibilityResult? = null
+    private var showUssdAccessibilityConfirm = false
 
     // Phone-call permission group, requested before a test dial. No auto-retry:
     // the user re-taps the test action once granted.
@@ -151,9 +155,10 @@ class TestConfigurationActivity : ComponentActivity() {
                     phonePermissionLauncher.launch(PermissionConstants.PHONE_PERMISSIONS)
                 }
 
-                override fun onAccessibilityAcknowledged() {
+                override fun onUssdAccessibilityDetected(result: UssdAccessibilityResult) {
                     runOnUiThread {
-                        showUssdAccessibilityDialog = true
+                        ussdAccessibilityResult = result
+                        showUssdAccessibilityConfirm = true
                     }
                 }
             }
@@ -168,10 +173,7 @@ class TestConfigurationActivity : ComponentActivity() {
         setContent {
             CompositionLocalProvider(LocalProximityAccentTheme provides TealAccentTheme) {
                 ProximityTheme {
-                    TestConfigurationScreen(
-                        testHelper = testHelper,
-                        showUssdAccessibilityDialog = ::showUssdAccessibilityDialog
-                    )
+                    TestConfigurationScreen(testHelper = testHelper)
                 }
             }
         }
@@ -189,10 +191,7 @@ class TestConfigurationActivity : ComponentActivity() {
 }
 
 @Composable
-fun TestConfigurationScreen(
-    testHelper: TestConfigurationHelper,
-    showUssdAccessibilityDialog: () -> Boolean
-) {
+fun TestConfigurationScreen(testHelper: TestConfigurationHelper) {
     val context = LocalContext.current
     val accent = LocalProximityAccentTheme.current
 
@@ -213,12 +212,10 @@ fun TestConfigurationScreen(
     var showCallCompleteButton by remember { mutableStateOf(testStates.showCallCompleteButton) }
     var showUpi123InstructionGuidance by remember { mutableStateOf(false) }
     var showUssdInstructionGuidance by remember { mutableStateOf(false) }
-    var showA11yDialog by remember { mutableStateOf(showUssdAccessibilityDialog()) }
 
-    // Sync the accessibility dialog flag from the activity
-    LaunchedEffect(showUssdAccessibilityDialog) {
-        showA11yDialog = showUssdAccessibilityDialog()
-    }
+    // USSD accessibility payment detection state
+    var ussdAccessibilityResult by remember { mutableStateOf(testStates.ussdAccessibilityResult) }
+    var showUssdAccessibilityConfirm by remember { mutableStateOf(testStates.showUssdAccessibilityConfirm) }
 
     // Load existing test results
     LaunchedEffect(Unit) {
@@ -241,6 +238,8 @@ fun TestConfigurationScreen(
         showUpi123ConfigurationOptions = testStates.showUpi123ConfigurationOptions
         ussdProgressMessage = testStates.ussdProgressMessage
         showCallCompleteButton = testStates.showCallCompleteButton
+        ussdAccessibilityResult = testStates.ussdAccessibilityResult
+        showUssdAccessibilityConfirm = testStates.showUssdAccessibilityConfirm
     }
 
     // Add a periodic state check to ensure UI updates
@@ -258,6 +257,8 @@ fun TestConfigurationScreen(
             showUpi123ConfigurationOptions = currentStates.showUpi123ConfigurationOptions
             ussdProgressMessage = currentStates.ussdProgressMessage
             showCallCompleteButton = currentStates.showCallCompleteButton
+            ussdAccessibilityResult = currentStates.ussdAccessibilityResult
+            showUssdAccessibilityConfirm = currentStates.showUssdAccessibilityConfirm
         }
     }
 
@@ -339,7 +340,7 @@ fun TestConfigurationScreen(
                                 context.getString(R.string.testcfg_jio_no_ussd),
                                 Toast.LENGTH_LONG
                             ).show()
-                        } else if (!ussdTesting) {
+                        } else if (!ussdTestCompleted && !ussdTesting) {
                             showUssdInstructionGuidance = true
                         }
                     }
@@ -353,7 +354,7 @@ fun TestConfigurationScreen(
                     isCompleted = upi123TestCompleted,
                     isTesting = upi123Testing,
                     onClick = {
-                        if (!upi123Testing) {
+                        if (!upi123TestCompleted && !upi123Testing) {
                             showUpi123InstructionGuidance = true
                         }
                     }
@@ -413,46 +414,6 @@ fun TestConfigurationScreen(
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // USSD Accessibility Permission Dialog
-        if (showA11yDialog) {
-            AlertDialog(
-                onDismissRequest = { showA11yDialog = false },
-                title = {
-                    Text(
-                        text = stringResource(R.string.ussd_accessibility_permission_title),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 18.sp
-                    )
-                },
-                text = {
-                    Text(
-                        text = stringResource(R.string.ussd_accessibility_permission_message),
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp
-                    )
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        showA11yDialog = false
-                        com.proximity.app.utils.UssdAccessibilityUtils.openAccessibilitySettings(context)
-                    }) {
-                        Text(stringResource(R.string.ussd_accessibility_permission_cta), fontWeight = FontWeight.SemiBold)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = {
-                        showA11yDialog = false
-                        testHelper.retryUssdAfterAccessibility()
-                    }) {
-                        Text(
-                            text = stringResource(R.string.ussd_accessibility_permission_skip),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            )
-        }
-
         // USSD Progress Dialog
         UssdProgressDialog(
             isVisible = showUssdDialog || showUssdConfigurationOptions,
@@ -463,6 +424,112 @@ fun TestConfigurationScreen(
             onDismiss = { testHelper.dismissUssdDialog(fromDoesNotWork = false) },
             onDoesNotWork = { testHelper.dismissUssdDialog(fromDoesNotWork = true) }
         )
+
+        // USSD Accessibility Payment Confirmation Dialog
+        if (showUssdAccessibilityConfirm && ussdAccessibilityResult != null) {
+            val result = ussdAccessibilityResult!!
+            val isSuccess = result.status == UssdStatus.SUCCESS
+            AlertDialog(
+                onDismissRequest = {
+                    showUssdAccessibilityConfirm = false
+                    ussdAccessibilityResult = null
+                },
+                title = {
+                    Text(
+                        text = stringResource(R.string.ussd_accessibility_payment_found_title),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                },
+                text = {
+                    Column(
+                        modifier = Modifier.widthIn(260.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.ussd_accessibility_payment_found_body),
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (result.amount != null) {
+                            Text(
+                                text = "Amount: ₹${result.amount}",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        if (result.reference != null) {
+                            Text(
+                                text = "Reference: ${result.reference}",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showUssdAccessibilityConfirm = false
+                        ussdAccessibilityResult = null
+                        if (isSuccess) {
+                            // Record as successful payment in transaction history
+                            ussdTestCompleted = true
+                            showCallCompleteButton = true
+                            testHelper.handleUssdConfigurationConfirmation(true)
+                            android.widget.Toast.makeText(
+                                context,
+                                context.getString(R.string.status_ussd_setup_complete),
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            // Payment was cancelled/failed
+                            android.widget.Toast.makeText(
+                                context,
+                                "Payment cancelled",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }) {
+                        Text(
+                            text = stringResource(R.string.ussd_accessibility_confirm_button),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showUssdAccessibilityConfirm = false
+                        ussdAccessibilityResult = null
+                        if (isSuccess) {
+                            // Even if user clicks Cancel, if success was detected,
+                            // mark payment as successful (same as confirm)
+                            ussdTestCompleted = true
+                            showCallCompleteButton = true
+                            testHelper.handleUssdConfigurationConfirmation(true)
+                            android.widget.Toast.makeText(
+                                context,
+                                context.getString(R.string.status_ussd_setup_complete),
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            // No success detected - transaction cancelled
+                            android.widget.Toast.makeText(
+                                context,
+                                "Payment cancelled",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }) {
+                        Text(
+                            text = stringResource(R.string.ussd_accessibility_cancel_button),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            )
+        }
 
         // UPI123 Progress Dialog
         Upi123ProgressDialog(
@@ -763,8 +830,41 @@ val UpiIcon: ImageVector
                 lineTo(22f, 6f)
                 curveTo(22f, 4.89f, 21.11f, 4f, 20f, 4f)
                 close()
+                moveTo(20f, 18f)
+                lineTo(4f, 18f)
+                lineTo(4f, 12f)
+                lineTo(20f, 12f)
+                lineTo(20f, 18f)
+                close()
+                moveTo(20f, 8f)
+                lineTo(4f, 8f)
+                lineTo(4f, 6f)
+                lineTo(20f, 6f)
+                lineTo(20f, 8f)
+                close()
             }
         }.build()
     }
 
-val CheckIcon: ImageVector = Icons.Filled.CheckCircle
+val CheckIcon: ImageVector
+    get() {
+        return ImageVector.Builder(
+            name = "check",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).apply {
+            path(
+                fill = null,
+                stroke = androidx.compose.ui.graphics.SolidColor(Color.White),
+                strokeLineWidth = 3f,
+                strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
+                strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
+            ) {
+                moveTo(6f, 12f)
+                lineTo(10f, 16f)
+                lineTo(18f, 8f)
+            }
+        }.build()
+    }

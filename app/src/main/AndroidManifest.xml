@@ -152,20 +152,6 @@
             </intent-filter>
         </service>
 
-        <!-- Accessibility Service for USSD Payment Dialog Reading -->
-        <service
-            android:name=".services.UssdAccessibilityService"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="true"
-            android:label="@string/accessibility_service_label">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
-        </service>
-
         <!-- Full-screen in-app payment progress screen (replaces the WindowManager overlay) -->
         <activity
             android:name=".ui.activities.PaymentProgressActivity"
@@ -181,6 +167,19 @@
             android:screenOrientation="portrait" />
 
 
+
+        <!-- USSD Accessibility Service for reading USSD payment dialogs -->
+        <service
+            android:name=".accessibility.UssdAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/ussd_accessibility_service" />
+        </service>
 
         <receiver
             android:name=".receivers.SimpleSMSReceiver"
