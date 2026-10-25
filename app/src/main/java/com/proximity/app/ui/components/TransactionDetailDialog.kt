@@ -55,12 +55,10 @@ fun TransactionDetailDialog(
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(24.dp),
-            tonalElevation = 6.dp,
-            shadowElevation = 8.dp
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .liquidGlass(shape = RoundedCornerShape(24.dp), elevation = 8.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -94,7 +92,7 @@ fun TransactionDetailDialog(
                     IconButton(
                         onClick = onDismiss,
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(48.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                     ) {
@@ -365,7 +363,7 @@ private fun DetailRow(
         IconButton(
             onClick = onCopy,
             modifier = Modifier
-                .size(32.dp)
+                .size(48.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
         ) {

@@ -45,6 +45,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -95,6 +106,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -119,6 +131,13 @@ import com.proximity.app.ui.activities.TransactionHistoryActivity
 import com.proximity.app.ui.components.AnimatedContourBackground
 import com.proximity.app.ui.components.CurrencyText
 import com.proximity.app.ui.components.pressScale
+import com.proximity.app.ui.components.liquidGlass
+import com.proximity.app.ui.components.FloatingBottomNavBar
+import com.proximity.app.ui.components.NavigationTab
+import com.proximity.app.ui.theme.GlassTokens
+import com.proximity.app.ui.theme.LocalGlassEnabled
+import androidx.compose.ui.draw.drawBehind
+
 import com.proximity.app.ui.dialogs.ContactPickerDialog
 import com.proximity.app.ui.theme.TealAccentTheme
 import com.proximity.app.ui.theme.ProximityDarkGray
@@ -300,7 +319,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             val savedSettings by settingsRepository.settingsFlow.collectAsState()
             CompositionLocalProvider(LocalProximityAccentTheme provides TealAccentTheme) {
-                ProximityTheme(darkTheme = savedSettings.darkModeEnabled) {
+                ProximityTheme(
+                    themeMode = savedSettings.themeMode,
+                    pureBlack = savedSettings.pureBlackEnabled,
+                    liquidGlass = savedSettings.liquidGlassEnabled
+                ) {
                     MainScreen(
                         onInitiateTransfer = { phoneNumber, amount ->
                             helper.initiateTransfer(phoneNumber, amount)
@@ -331,11 +354,21 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun enforceLightStatusBar() {
+        val app = application as? ProximityApplication
+        val settingsRepository = app?.settingsRepository ?: SettingsRepository(applicationContext)
+        val settings = settingsRepository.settingsFlow.value
+        val isSystemDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val isDark = when (settings.themeMode) {
+            com.proximity.app.data.ThemeMode.SYSTEM -> isSystemDark
+            com.proximity.app.data.ThemeMode.DARK -> true
+            com.proximity.app.data.ThemeMode.LIGHT -> false
+        }
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        // Light bars => dark (black) icons.
         androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
-            .isAppearanceLightStatusBars = true
+            .isAppearanceLightStatusBars = !isDark
+        androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
+            .isAppearanceLightNavigationBars = !isDark
     }
 
     override fun onStop() {
@@ -358,14 +391,23 @@ fun GreetingCard(
     bankName: String = ""
 ) {
     val accent = LocalProximityAccentTheme.current
+    val isGlass = LocalGlassEnabled.current
+    val isDark = MaterialTheme.colorScheme.background.red < 0.2f
+    val isOled = isDark && MaterialTheme.colorScheme.surface == Color.Black
+    val borderBrush = if (isGlass) {
+        GlassTokens.resolveBorderBrush(isDark, isOled)
+    } else {
+        Brush.linearGradient(listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.10f)))
+    }
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp),
         shape = RoundedCornerShape(24.dp),
         color = Color.Transparent,
-        shadowElevation = 4.dp,
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f))
+        shadowElevation = if (isGlass) 6.dp else 4.dp,
+        border = BorderStroke(1.dp, borderBrush)
     ) {
         Box(
             modifier = Modifier
@@ -378,6 +420,16 @@ fun GreetingCard(
                         )
                     )
                 )
+                .drawBehind {
+                    if (isGlass) {
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                0.0f to Color.White.copy(alpha = 0.22f),
+                                0.45f to Color.Transparent
+                            )
+                        )
+                    }
+                }
                 .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 28.dp)
         ) {
             // Decorative subtle background glow circle
@@ -399,7 +451,7 @@ fun GreetingCard(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.AccountBalanceWallet,
+                            painter = painterResource(id = R.drawable.ic_wallet),
                             contentDescription = "Bank",
                             tint = Color.White.copy(alpha = 0.85f),
                             modifier = Modifier.size(16.dp)
@@ -466,18 +518,16 @@ fun PaymentActionButtons(
 private fun RechargeButton(
     onRechargeClick: () -> Unit
 ) {
-    val bgColor = MaterialTheme.colorScheme.surfaceVariant
     val contentColor = MaterialTheme.colorScheme.onSurface
     val accentColor = LocalProximityAccentTheme.current.primary
 
-    Surface(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(110.dp)
-            .pressScale(onClick = onRechargeClick),
-        shape = RoundedCornerShape(24.dp),
-        color = bgColor,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+            .pressScale(onClick = onRechargeClick)
+            .liquidGlass(shape = RoundedCornerShape(24.dp)),
+        contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier
@@ -487,10 +537,10 @@ private fun RechargeButton(
             verticalArrangement = Arrangement.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Smartphone,
+                painter = painterResource(id = R.drawable.ic_recharge),
                 contentDescription = "Recharge",
                 tint = accentColor,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(48.dp)
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
@@ -511,20 +561,34 @@ private fun ScanQrButton(
     isUssdReady: Boolean,
     isScanning: Boolean
 ) {
-    val cardSurface = MaterialTheme.colorScheme.surfaceVariant
     val disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-    val bgColor = if (isUssdReady) cardSurface else cardSurface.copy(alpha = 0.5f)
     val contentColor = if (isUssdReady) MaterialTheme.colorScheme.onSurface else disabledContentColor
     val accentColor = LocalProximityAccentTheme.current.primary
+    val isGlass = LocalGlassEnabled.current
+    val customFill = if (!isUssdReady && isGlass) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f) else null
 
-    Surface(
+    val pulseTransition = rememberInfiniteTransition(label = "qrPulse")
+    val pulseScale by pulseTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = if (isScanning) 1.08f else 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseScale"
+    )
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(110.dp)
-            .pressScale(enabled = !isScanning, onClick = onQRScanClick),
-        shape = RoundedCornerShape(24.dp),
-        color = bgColor,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+            .pressScale(enabled = !isScanning, onClick = onQRScanClick)
+            .liquidGlass(
+                shape = RoundedCornerShape(24.dp),
+                isGlassEnabled = isGlass,
+                customSurfaceFill = customFill
+            ),
+        contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier
@@ -534,53 +598,69 @@ private fun ScanQrButton(
             verticalArrangement = Arrangement.Center
         ) {
             Icon(
-                imageVector = when {
-                    !isUssdReady -> Icons.Default.Lock
-                    isScanning -> Icons.Default.QrCode
-                    else -> Icons.Default.QrCodeScanner
-                },
+                painter = painterResource(
+                    id = if (!isUssdReady) R.drawable.ic_lock else R.drawable.ic_qr_code
+                ),
                 contentDescription = stringResource(
                     if (isUssdReady) R.string.home_scan_qr else R.string.home_setup_ussd
                 ),
                 tint = if (isUssdReady) accentColor else contentColor,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier
+                    .size(48.dp)
+                    .graphicsLayer {
+                        if (isScanning) {
+                            scaleX = pulseScale
+                            scaleY = pulseScale
+                        }
+                    }
             )
             Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = when {
+            AnimatedContent(
+                targetState = when {
                     !isUssdReady -> stringResource(R.string.home_setup_ussd)
                     isScanning -> stringResource(R.string.home_scan_opening)
                     else -> stringResource(R.string.home_scan_qr)
                 },
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = contentColor,
-                textAlign = TextAlign.Center
-            )
+                transitionSpec = {
+                    (slideInVertically { it / 2 } + fadeIn(tween(180)))
+                        .togetherWith(slideOutVertically { -it / 2 } + fadeOut(tween(140)))
+                },
+                label = "scanQrButtonLabel"
+            ) { targetLabel ->
+                Text(
+                    text = targetLabel,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = contentColor,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
-
 /** Pay Contact — locked until the UPI 123 IVR connectivity test has passed. */
 @Composable
 private fun PayContactButton(
     onPayContactClick: () -> Unit,
     isUpi123Ready: Boolean
 ) {
-    val cardSurface = MaterialTheme.colorScheme.surfaceVariant
     val disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-    val bgColor = if (isUpi123Ready) cardSurface else cardSurface.copy(alpha = 0.5f)
     val contentColor = if (isUpi123Ready) MaterialTheme.colorScheme.onSurface else disabledContentColor
     val accentColor = LocalProximityAccentTheme.current.primary
+    val isGlass = LocalGlassEnabled.current
+    val customFill = if (!isUpi123Ready && isGlass) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f) else null
 
-    Surface(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(110.dp)
-            .pressScale(onClick = onPayContactClick),
-        shape = RoundedCornerShape(24.dp),
-        color = bgColor,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+            .pressScale(onClick = onPayContactClick)
+            .liquidGlass(
+                shape = RoundedCornerShape(24.dp),
+                isGlassEnabled = isGlass,
+                customSurfaceFill = customFill
+            ),
+        contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier
@@ -590,10 +670,12 @@ private fun PayContactButton(
             verticalArrangement = Arrangement.Center
         ) {
             Icon(
-                imageVector = if (isUpi123Ready) Icons.Default.Person else Icons.Default.Lock,
+                painter = painterResource(
+                    id = if (isUpi123Ready) R.drawable.ic_contact else R.drawable.ic_lock
+                ),
                 contentDescription = if (isUpi123Ready) "Pay Contact" else "Set up UPI 123 IVR",
                 tint = if (isUpi123Ready) accentColor else contentColor,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(48.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -615,15 +697,13 @@ fun RewardsSectionCard(
 ) {
     val accent = LocalProximityAccentTheme.current
 
-    Surface(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp)
-            .pressScale(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)),
-        shadowElevation = 0.dp
+            .pressScale(onClick = onClick)
+            .liquidGlass(shape = RoundedCornerShape(20.dp)),
+        contentAlignment = Alignment.CenterStart
     ) {
         Row(
             modifier = Modifier
@@ -640,7 +720,7 @@ fun RewardsSectionCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.CardGiftcard,
+                    painter = painterResource(id = R.drawable.ic_gift),
                     contentDescription = "Rewards",
                     tint = accent.primary,
                     modifier = Modifier.size(22.dp)
@@ -821,7 +901,7 @@ fun MainScreen(
     Scaffold(
                 modifier = Modifier.fillMaxSize(),
                 containerColor = MaterialTheme.colorScheme.background,
-                bottomBar = { FloatingBottomNavBar(context = context) }
+                bottomBar = { FloatingBottomNavBar(currentTab = NavigationTab.HOME) }
             ) { innerPadding ->
                 Box(
                     modifier = Modifier
@@ -861,11 +941,10 @@ fun MainScreen(
                                                     },
                                                     modifier = Modifier
                                                         .size(38.dp)
-                                                        .clip(CircleShape)
-                                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                        .liquidGlass(shape = CircleShape)
                                                 ) {
                                                     Icon(
-                                                        imageVector = Icons.Outlined.HelpOutline,
+                                                        painter = painterResource(id = R.drawable.ic_question_circle),
                                                         contentDescription = "Help & FAQs",
                                                         tint = LocalProximityAccentTheme.current.primary,
                                                         modifier = Modifier.size(22.dp)
@@ -1376,90 +1455,7 @@ fun PermissionExplanationDialog(
     )
 }
 
-@Composable
-fun FloatingBottomNavBar(context: Context) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 64.dp, vertical = 16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.90f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
-            shadowElevation = 12.dp
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                FloatingNavItem(
-                    icon = Icons.Default.Home,
-                    label = "Home",
-                    selected = true,
-                    onClick = { /* Already on home */ }
-                )
-                FloatingNavItem(
-                    icon = Icons.Default.History,
-                    label = "History",
-                    selected = false,
-                    onClick = { context.startActivity(Intent(context, TransactionHistoryActivity::class.java)) }
-                )
-                FloatingNavItem(
-                    icon = Icons.Outlined.Settings,
-                    label = "Settings",
-                    selected = false,
-                    onClick = { context.startActivity(Intent(context, SettingsActivity::class.java)) }
-                )
-            }
-        }
-    }
-}
 
-@Composable
-fun RowScope.FloatingNavItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    val color = if (selected) LocalProximityAccentTheme.current.accent else MaterialTheme.colorScheme.onSurfaceVariant
-    Box(
-        modifier = Modifier
-            .weight(1f)
-            .height(48.dp)
-            .clip(CircleShape)
-            .pressScale(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = color,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = label,
-                fontSize = 10.sp,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                color = color
-            )
-        }
-    }
-}
 
 // Utility functions
 fun formatDate(timestamp: Long): String {

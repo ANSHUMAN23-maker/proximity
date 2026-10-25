@@ -2,6 +2,8 @@
 // Copyright 2026 Proximity
 
 package com.proximity.app.ui.dialogs
+import androidx.compose.ui.res.painterResource
+import com.proximity.app.R
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -97,7 +99,7 @@ fun Upi123InstructionDialog(
 
                         IconButton(
                             onClick = onDismiss,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
@@ -158,7 +160,7 @@ fun Upi123InstructionDialog(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                painter = painterResource(id = R.drawable.ic_forward_arrow),
                                 contentDescription = null,
                                 tint = Color.White,
                                 modifier = Modifier.size(18.dp)

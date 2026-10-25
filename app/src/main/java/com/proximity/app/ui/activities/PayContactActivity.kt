@@ -28,10 +28,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -253,7 +255,7 @@ private fun PhoneNumberStepScreen(
         ) {
             IconButton(onClick = onBackClick) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    painter = painterResource(id = R.drawable.ic_back_arrow),
                     contentDescription = "Back",
                     tint = MaterialTheme.colorScheme.onBackground
                 )
@@ -268,7 +270,7 @@ private fun PhoneNumberStepScreen(
                 Toast.makeText(context, "Enter a 10-digit mobile number to pay via UPI 123", Toast.LENGTH_SHORT).show()
             }) {
                 Icon(
-                    imageVector = Icons.Outlined.HelpOutline,
+                    painter = painterResource(id = R.drawable.ic_question_circle),
                     contentDescription = "Help",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -400,7 +402,9 @@ private fun PhoneNumberStepScreen(
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
                 .clickable { onSelectContactClick() }
-                .padding(vertical = 4.dp, horizontal = 4.dp),
+                .padding(vertical = 4.dp, horizontal = 4.dp)
+                .semantics(mergeDescendants = true) { },
+
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -447,7 +451,7 @@ private fun PhoneNumberStepScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    painter = painterResource(id = R.drawable.ic_forward_arrow),
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(18.dp)
@@ -493,7 +497,7 @@ private fun AmountStepScreen(
         ) {
             IconButton(onClick = onBackClick) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    painter = painterResource(id = R.drawable.ic_back_arrow),
                     contentDescription = "Back",
                     tint = MaterialTheme.colorScheme.onBackground
                 )
@@ -508,7 +512,7 @@ private fun AmountStepScreen(
                 Toast.makeText(context, "Enter the amount to transfer (up to ₹4,999)", Toast.LENGTH_SHORT).show()
             }) {
                 Icon(
-                    imageVector = Icons.Outlined.HelpOutline,
+                    painter = painterResource(id = R.drawable.ic_question_circle),
                     contentDescription = "Help",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -564,30 +568,38 @@ private fun AmountStepScreen(
             )
 
             // Transparent TextField overlaid to capture native system number pad inputs
-            BasicTextField(
-                value = amount,
-                onValueChange = { input ->
-                    val filtered = input.filter { it.isDigit() }
-                    if (filtered.length <= 6) {
-                        onAmountChange(filtered)
-                    }
-                },
+            Box(
                 modifier = Modifier
-                    .size(1.dp)
-                    .focusRequester(focusRequester),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        if (amount.isNotEmpty() && amount != "0" && !isOverCap) {
-                            onReviewPayment()
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .semantics(mergeDescendants = true) { },
+                contentAlignment = Alignment.Center
+            ) {
+                BasicTextField(
+                    value = amount,
+                    onValueChange = { input: String ->
+                        val filtered = input.filter { it.isDigit() }
+                        if (filtered.length <= 6) {
+                            onAmountChange(filtered)
                         }
-                    }
-                ),
-                singleLine = true
-            )
+                    },
+                    modifier = Modifier
+                        .size(1.dp)
+                        .focusRequester(focusRequester),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            if (amount.isNotEmpty() && amount != "0" && !isOverCap) {
+                                onReviewPayment()
+                            }
+                        }
+                    ),
+                    singleLine = true
+                )
+            }
 
             if (isOverCap) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -595,7 +607,10 @@ private fun AmountStepScreen(
                     text = Upi123CallStringBuilder.Reason.AMOUNT_ABOVE_CAP.messageFor(context),
                     color = ProximityStatusError,
                     fontSize = 12.sp,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics {
+                        error(Upi123CallStringBuilder.Reason.AMOUNT_ABOVE_CAP.messageFor(context))
+                    }
                 )
             }
         }
@@ -629,7 +644,7 @@ private fun AmountStepScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    painter = painterResource(id = R.drawable.ic_forward_arrow),
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(18.dp)

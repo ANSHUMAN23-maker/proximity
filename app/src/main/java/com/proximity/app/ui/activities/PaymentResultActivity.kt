@@ -23,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -80,16 +82,20 @@ fun PaymentResultScreen(intent: Intent, onDone: () -> Unit) {
     var step3Visible by remember { mutableStateOf(false) }
     var step4Visible by remember { mutableStateOf(false) }
     var startCount by remember { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
 
     LaunchedEffect(Unit) {
         delay(100)
         step1Visible = true
-        delay(250)
+        // Synchronize tactile tick with checkmark completion & burst
+        delay(400)
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+
         step2Visible = true
-        delay(250)
+        delay(200)
         startCount = true
         step3Visible = true
-        delay(250)
+        delay(200)
         step4Visible = true
     }
 
@@ -135,7 +141,7 @@ fun PaymentResultScreen(intent: Intent, onDone: () -> Unit) {
 
                 AnimatedVisibility(
                     visible = step2Visible,
-                    enter = fadeIn(animationSpec = tween(400))
+                    enter = slideInVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)) { it / 3 } + fadeIn(tween(250))
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Spacer(modifier = Modifier.height(16.dp))
@@ -161,7 +167,7 @@ fun PaymentResultScreen(intent: Intent, onDone: () -> Unit) {
 
                 AnimatedVisibility(
                     visible = step3Visible,
-                    enter = scaleIn(initialScale = 0.8f) + fadeIn(animationSpec = tween(400))
+                    enter = slideInVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)) { it / 3 } + fadeIn(tween(250))
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Spacer(modifier = Modifier.height(16.dp))
@@ -179,7 +185,7 @@ fun PaymentResultScreen(intent: Intent, onDone: () -> Unit) {
 
                 AnimatedVisibility(
                     visible = step4Visible,
-                    enter = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(animationSpec = tween(400))
+                    enter = slideInVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)) { it / 4 } + fadeIn(tween(300))
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),

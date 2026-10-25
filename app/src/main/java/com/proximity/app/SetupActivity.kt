@@ -42,6 +42,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -203,7 +204,7 @@ fun SetupScreen(setupHelper: SetupHelper) {
                             modifier = Modifier.padding(end = 8.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                painter = painterResource(id = R.drawable.ic_back_arrow),
                                 contentDescription = "Back",
                                 tint = MaterialTheme.colorScheme.onBackground
                             )
@@ -659,7 +660,7 @@ fun CompleteSetupButton(
             if (showArrow) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    painter = painterResource(id = R.drawable.ic_forward_arrow),
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(20.dp)
@@ -730,7 +731,7 @@ fun PermissionsSection(
         PermissionCard(
             title = "Core App Permissions",
             description = "Allows Proximity to make calls (USSD), send payment notifications, verify bank SMS, and let you pick contacts.",
-            icon = Icons.Filled.Phone,
+            iconRes = R.drawable.ic_phone_call,
             isGranted = coreGranted,
             onClick = {
                 val permsToRequest = PermissionConstants.REQUIRED_PERMISSIONS.toMutableList()
@@ -764,7 +765,8 @@ fun PermissionsSection(
 fun PermissionCard(
     title: String,
     description: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    iconRes: Int? = null,
     isGranted: Boolean,
     onClick: () -> Unit
 ) {
@@ -790,11 +792,25 @@ fun PermissionCard(
                 .background(if (isGranted) statusGreen.copy(alpha = 0.2f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = if (isGranted) Icons.Filled.CheckCircle else icon,
-                contentDescription = null,
-                tint = if (isGranted) statusGreen else MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (isGranted) {
+                Icon(
+                    imageVector = Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = statusGreen
+                )
+            } else if (iconRes != null) {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
         Column(
@@ -986,7 +1002,7 @@ fun WelcomeSection(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    painter = painterResource(id = R.drawable.ic_forward_arrow),
                     contentDescription = "Continue",
                     tint = if (termsAccepted) MaterialTheme.colorScheme.onPrimary else disabledText,
                     modifier = Modifier.size(16.dp)
@@ -1024,7 +1040,7 @@ fun GroundRulesSection() {
 
         // Card 2: Keep sensitive details private
         GroundRuleCard(
-            icon = Icons.Default.Lock,
+            iconRes = R.drawable.ic_lock,
             title = "Keep sensitive details private",
             description = "Any kind of banking password or UPI pin is being entered on official government portals. Proximity never read or stores such information.",
             accentColor = accent.primary
@@ -1042,7 +1058,8 @@ fun GroundRulesSection() {
 
 @Composable
 private fun GroundRuleCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    iconRes: Int? = null,
     title: String,
     description: String,
     accentColor: Color
@@ -1067,12 +1084,21 @@ private fun GroundRuleCard(
                     .background(accentColor.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accentColor,
-                    modifier = Modifier.size(22.dp)
-                )
+                if (iconRes != null) {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(22.dp)
+                    )
+                } else if (icon != null) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
 
             Column(

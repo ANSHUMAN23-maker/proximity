@@ -1,4 +1,6 @@
 package com.proximity.app.ui.activities
+import androidx.compose.ui.res.painterResource
+import com.proximity.app.R
 import com.proximity.app.ui.components.*
 
 import android.annotation.SuppressLint
@@ -26,7 +28,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import com.proximity.app.R
 import com.proximity.app.ui.components.shimmer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -182,7 +183,7 @@ private fun RechargeWebScreen(
                 navigationIcon = {
                     IconButton(onClick = handleBack) {
                         Icon(
-                            imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
+                            painter = painterResource(id = R.drawable.ic_back_arrow),
                             contentDescription = "Back",
                             tint               = MaterialTheme.colorScheme.onSurface
                         )

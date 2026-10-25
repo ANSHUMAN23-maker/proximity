@@ -2,6 +2,8 @@
 // Copyright 2026 Proximity
 
 package com.proximity.app
+import androidx.compose.ui.res.painterResource
+import com.proximity.app.R
 
 import android.app.Activity
 import android.content.Intent
@@ -295,7 +297,7 @@ fun TestConfigurationScreen(testHelper: TestConfigurationHelper) {
                     modifier = Modifier.padding(end = 8.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        painter = painterResource(id = R.drawable.ic_back_arrow),
                         contentDescription = stringResource(R.string.testcfg_back),
                         tint = MaterialTheme.colorScheme.onBackground
                     )

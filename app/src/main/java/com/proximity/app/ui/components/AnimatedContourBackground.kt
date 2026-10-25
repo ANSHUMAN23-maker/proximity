@@ -18,8 +18,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.proximity.app.ui.theme.LocalProximityAccentTheme
+import android.provider.Settings
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -27,16 +29,25 @@ import kotlin.math.sin
 fun AnimatedContourBackground(
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val accent = LocalProximityAccentTheme.current
     val isDark = MaterialTheme.colorScheme.background.red < 0.2f
     val lineColor = if (isDark) {
-        accent.primary.copy(alpha = 0.15f)
+        accent.primary.copy(alpha = 0.16f)
     } else {
-        MaterialTheme.colorScheme.onBackground.copy(alpha = 0.10f)
+        androidx.compose.ui.graphics.Color(0xFF94A3B8).copy(alpha = 0.35f)
     }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "contour_anim")
-    val phase by infiniteTransition.animateFloat(
+    // Reduced motion: disable animation when system animation scale is 0
+    val animatorScale = Settings.Global.getFloat(
+        context.contentResolver,
+        Settings.Global.TRANSITION_ANIMATION_SCALE,
+        1f
+    )
+    val isReducedMotion = animatorScale == 0f
+
+    val infiniteTransition = if (isReducedMotion) null else rememberInfiniteTransition(label = "contour_anim")
+    val phaseState = infiniteTransition?.animateFloat(
         initialValue = 0f,
         targetValue = (2 * Math.PI).toFloat(),
         animationSpec = infiniteRepeatable(
@@ -45,6 +56,7 @@ fun AnimatedContourBackground(
         ),
         label = "phase"
     )
+    val phase: Float = phaseState?.value ?: 0f
 
     Canvas(modifier = modifier.fillMaxSize()) {
         val width = size.width

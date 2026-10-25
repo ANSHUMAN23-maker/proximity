@@ -1,4 +1,6 @@
 package com.proximity.app.ui.activities
+import androidx.compose.ui.res.painterResource
+import com.proximity.app.R
 
 import android.content.Intent
 import android.os.Bundle
@@ -140,7 +142,7 @@ fun PaymentGuidanceScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            painter = painterResource(id = R.drawable.ic_back_arrow),
                             contentDescription = "Back",
                             tint = MaterialTheme.colorScheme.onBackground
                         )
@@ -175,7 +177,7 @@ fun PaymentGuidanceScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        painter = painterResource(id = R.drawable.ic_forward_arrow),
                         contentDescription = "Proceed",
                         tint = Color.White,
                         modifier = Modifier.size(20.dp)
@@ -298,7 +300,7 @@ fun PaymentGuidanceScreen(
                                 .padding(horizontal = 14.dp, vertical = 10.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.RingVolume,
+                                painter = painterResource(id = R.drawable.ic_phone_call),
                                 contentDescription = null,
                                 tint = accent.primary,
                                 modifier = Modifier.size(20.dp)
@@ -380,7 +382,7 @@ fun PaymentGuidanceScreen(
                             Spacer(modifier = Modifier.width(10.dp))
 
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                painter = painterResource(id = R.drawable.ic_forward_arrow),
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant

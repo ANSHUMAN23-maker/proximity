@@ -11,6 +11,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.ColorUtils
 
 /**
  * Proximity Dark Theme Design System
@@ -63,6 +66,29 @@ val TealAccentTheme = ProximityAccentTheme(
 )
 
 val LocalProximityAccentTheme = compositionLocalOf { TealAccentTheme }
+
+/**
+ * Tunes the accent color for readable body/label text by HSL lightness clamping.
+ * In dark mode, lightens with white and clamps lightness >= 0.72f.
+ * In light mode, darkens with black and clamps lightness <= 0.32f.
+ */
+fun accentTextColor(accent: Color, dark: Boolean): Color {
+    val blended = if (dark) {
+        lerp(accent, Color.White, 0.35f)
+    } else {
+        lerp(accent, Color.Black, 0.45f)
+    }
+    val hsl = FloatArray(3)
+    ColorUtils.colorToHSL(blended.toArgb(), hsl)
+    hsl[2] = if (dark) hsl[2].coerceAtLeast(0.72f) else hsl[2].coerceAtMost(0.32f)
+    return Color(ColorUtils.HSLToColor(hsl))
+}
+
+/** Accent-contrast text color, provided app-wide from the current accent + theme. */
+val LocalAccentTextColor = compositionLocalOf { ProximityTeal }
+
+/** Controls whether liquid frosted glass surfaces are active. */
+val LocalGlassEnabled = compositionLocalOf { true }
 
 // Legacy aliases - map to NEW slate/teal values so existing code compiles unchanged
 val ProximityBlack: Color

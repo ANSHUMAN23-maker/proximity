@@ -7,6 +7,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+enum class ThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK
+}
+
 class SettingsRepository(private val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences(
         "Proximity_settings",
@@ -25,8 +31,14 @@ class SettingsRepository(private val context: Context) {
         val setupCompleted: Boolean = false,
         val testConfigCompleted: Boolean = false,
         val selectedOperator: String = "unknown",
-        val darkModeEnabled: Boolean = false
-    )
+        val themeMode: ThemeMode = ThemeMode.SYSTEM,
+        val pureBlackEnabled: Boolean = false,
+        val liquidGlassEnabled: Boolean = true
+    ) {
+        // Backward compatibility helper for existing callers
+        val darkModeEnabled: Boolean
+            get() = themeMode == ThemeMode.DARK
+    }
 
     fun saveSettings(settings: SavedSettings) {
         prefs.edit {
@@ -37,7 +49,10 @@ class SettingsRepository(private val context: Context) {
             putBoolean("debug_mode", settings.debugMode)
             putBoolean("setup_completed", settings.setupCompleted)
             putBoolean("test_config_completed", settings.testConfigCompleted)
-            putBoolean("dark_mode_enabled", settings.darkModeEnabled)
+            putString("theme_mode", settings.themeMode.name)
+            putBoolean("pure_black_enabled", settings.pureBlackEnabled)
+            putBoolean("liquid_glass_enabled", settings.liquidGlassEnabled)
+            putBoolean("dark_mode_enabled", settings.themeMode == ThemeMode.DARK)
         }
 
         if (settings.selectedOperator != "unknown") {
@@ -51,6 +66,18 @@ class SettingsRepository(private val context: Context) {
 
     private fun loadSettings(): SavedSettings {
         val simPrefs = context.getSharedPreferences("ProximityPrefs", Context.MODE_PRIVATE)
+        val legacyDarkMode = prefs.getBoolean("dark_mode_enabled", false)
+        val savedThemeModeStr = prefs.getString("theme_mode", null)
+        val resolvedThemeMode = if (savedThemeModeStr != null) {
+            try {
+                ThemeMode.valueOf(savedThemeModeStr)
+            } catch (e: Exception) {
+                if (legacyDarkMode) ThemeMode.DARK else ThemeMode.SYSTEM
+            }
+        } else {
+            if (legacyDarkMode) ThemeMode.DARK else ThemeMode.SYSTEM
+        }
+
         return SavedSettings(
             bankId = simPrefs.getString("selected_bank", prefs.getString("bank_id", "")) ?: "",
             ussdTimeout = prefs.getInt("ussd_timeout", 30),
@@ -60,7 +87,9 @@ class SettingsRepository(private val context: Context) {
             setupCompleted = prefs.getBoolean("setup_completed", false),
             testConfigCompleted = prefs.getBoolean("test_config_completed", false),
             selectedOperator = simPrefs.getString("selected_primary_sim", "unknown") ?: "unknown",
-            darkModeEnabled = prefs.getBoolean("dark_mode_enabled", false)
+            themeMode = resolvedThemeMode,
+            pureBlackEnabled = prefs.getBoolean("pure_black_enabled", false),
+            liquidGlassEnabled = prefs.getBoolean("liquid_glass_enabled", true)
         )
     }
 
@@ -75,9 +104,3 @@ class SettingsRepository(private val context: Context) {
         saveSettings(SavedSettings())
     }
 }
-
-
-
-
-
-

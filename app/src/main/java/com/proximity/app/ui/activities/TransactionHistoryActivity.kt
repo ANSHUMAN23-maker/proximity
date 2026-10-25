@@ -2,6 +2,8 @@
 // Copyright 2026 Proximity
 
 package com.proximity.app.ui.activities
+import androidx.compose.ui.res.painterResource
+import com.proximity.app.R
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -38,10 +40,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.proximity.app.ProximityApplication
-import com.proximity.app.R
 import com.proximity.app.data.SettingsRepository
 import com.proximity.app.data.Transaction
 import com.proximity.app.ui.components.AnimatedContourBackground
+import com.proximity.app.ui.components.FloatingBottomNavBar
+import com.proximity.app.ui.components.NavigationTab
+
 import com.proximity.app.ui.components.CurrencyText
 import com.proximity.app.ui.components.ProximityBrandedHeader
 import com.proximity.app.ui.components.pressScale
@@ -87,16 +91,22 @@ private fun isSameDay(c1: Calendar, c2: Calendar): Boolean =
 class TransactionHistoryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+
         val app = application as? ProximityApplication
         val settingsRepository = app?.settingsRepository ?: SettingsRepository(applicationContext)
         setTheme(R.style.Theme_Proximity)
         setContent {
             val savedSettings by settingsRepository.settingsFlow.collectAsState()
             CompositionLocalProvider(LocalProximityAccentTheme provides TealAccentTheme) {
-                ProximityTheme(darkTheme = savedSettings.darkModeEnabled) {
-                    TransactionHistoryScreen(
-                        onBackClick = { finish() }
-                    )
+                ProximityTheme(
+                    themeMode = savedSettings.themeMode,
+                    pureBlack = savedSettings.pureBlackEnabled,
+                    liquidGlass = savedSettings.liquidGlassEnabled
+                ) {
+                    TransactionHistoryScreen()
                 }
             }
         }
@@ -105,9 +115,7 @@ class TransactionHistoryActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TransactionHistoryScreen(
-    onBackClick: () -> Unit
-) {
+fun TransactionHistoryScreen() {
     val transactionViewModel: TransactionViewModel = viewModel()
 
     // State
@@ -162,10 +170,13 @@ fun TransactionHistoryScreen(
 
     val accent = LocalProximityAccentTheme.current
 
-    Surface(
+    Scaffold(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
+        containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = {
+            FloatingBottomNavBar(currentTab = NavigationTab.HISTORY)
+        }
+    ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -179,11 +190,10 @@ fun TransactionHistoryScreen(
                     .widthIn(max = 420.dp)
                     .align(Alignment.Center)
                     .statusBarsPadding()
-                    .navigationBarsPadding()
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // COMPACT HEADER
+                // COMPACT HEADER (without back arrow button)
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -198,24 +208,6 @@ fun TransactionHistoryScreen(
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Back button
-                        IconButton(
-                            onClick = onBackClick,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f))
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.history_back),
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
                         ProximityBrandedHeader(
                             modifier = Modifier.weight(1f).padding(vertical = 0.dp),
                             contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -308,7 +300,8 @@ fun TransactionHistoryScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .weight(1f),
+                                .weight(1f)
+                                .padding(bottom = innerPadding.calculateBottomPadding()),
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator(
@@ -322,7 +315,8 @@ fun TransactionHistoryScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .weight(1f),
+                                .weight(1f)
+                                .padding(bottom = innerPadding.calculateBottomPadding()),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -350,7 +344,8 @@ fun TransactionHistoryScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .weight(1f),
+                                .weight(1f)
+                                .padding(bottom = innerPadding.calculateBottomPadding()),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(
@@ -365,7 +360,7 @@ fun TransactionHistoryScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.History,
+                                        painter = painterResource(id = R.drawable.ic_history),
                                         contentDescription = null,
                                         modifier = Modifier.size(36.dp),
                                         tint = accent.primary
@@ -399,7 +394,12 @@ fun TransactionHistoryScreen(
                     else -> {
                         LazyColumn(
                             modifier = Modifier.weight(1f),
-                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp)
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = 0.dp,
+                                bottom = innerPadding.calculateBottomPadding() + 24.dp
+                            )
                         ) {
                             groupedTransactions.forEach { (dateLabel, transactions) ->
                                 // Date section header

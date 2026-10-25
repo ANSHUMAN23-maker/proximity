@@ -30,8 +30,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,8 +49,21 @@ import com.proximity.app.ui.components.SimOperatorLogoBadge
 import com.proximity.app.ui.components.pressScale
 import com.proximity.app.SetupActivity
 import com.proximity.app.data.SettingsRepository
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.isSystemInDarkTheme
+import com.proximity.app.data.ThemeMode
+import com.proximity.app.ui.components.liquidGlass
+
 import com.proximity.app.repository.TransactionRepository
 import com.proximity.app.ui.components.AnimatedContourBackground
+import com.proximity.app.ui.components.FloatingBottomNavBar
+import com.proximity.app.ui.components.NavigationTab
+
 import com.proximity.app.ui.theme.TealAccentTheme
 import com.proximity.app.ui.theme.ProximityAccentGreenBright
 import com.proximity.app.ui.theme.ProximityStatusError
@@ -68,15 +83,22 @@ class SettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+
         val app = application as? ProximityApplication
         val settingsRepository = app?.settingsRepository ?: SettingsRepository(applicationContext)
         setTheme(R.style.Theme_Proximity)
         setContent {
             val savedSettings by settingsRepository.settingsFlow.collectAsState()
             CompositionLocalProvider(LocalProximityAccentTheme provides TealAccentTheme) {
-                ProximityTheme(darkTheme = savedSettings.darkModeEnabled) {
+                ProximityTheme(
+                    themeMode = savedSettings.themeMode,
+                    pureBlack = savedSettings.pureBlackEnabled,
+                    liquidGlass = savedSettings.liquidGlassEnabled
+                ) {
                     SettingsScreen(
-                        onBackPressed = { finish() },
                         settingsRepository = settingsRepository,
                         onRequestPermissions = { permissions ->
                             permissionLauncher.launch(permissions)
@@ -107,9 +129,14 @@ data class SettingsState(
     val overlayEnabled: Boolean = true,
     val debugMode: Boolean = false,
     val setupCompleted: Boolean = true,
-    val darkModeEnabled: Boolean = false,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val pureBlackEnabled: Boolean = false,
+    val liquidGlassEnabled: Boolean = true,
     val permissions: Map<String, Boolean> = emptyMap()
-)
+) {
+    val darkModeEnabled: Boolean
+        get() = themeMode == ThemeMode.DARK
+}
 
 // Bank Data
 val banks = listOf(
@@ -143,8 +170,21 @@ class SettingsViewModel : androidx.lifecycle.ViewModel() {
         state = state.copy(overlayEnabled = !state.overlayEnabled)
     }
 
+    fun setThemeMode(mode: ThemeMode) {
+        state = state.copy(themeMode = mode)
+    }
+
+    fun togglePureBlack() {
+        state = state.copy(pureBlackEnabled = !state.pureBlackEnabled)
+    }
+
+    fun toggleLiquidGlass() {
+        state = state.copy(liquidGlassEnabled = !state.liquidGlassEnabled)
+    }
+
     fun toggleDarkMode() {
-        state = state.copy(darkModeEnabled = !state.darkModeEnabled)
+        val nextMode = if (state.themeMode == ThemeMode.DARK) ThemeMode.LIGHT else ThemeMode.DARK
+        state = state.copy(themeMode = nextMode)
     }
 
     fun refreshPermissions(context: Context) {
@@ -186,7 +226,9 @@ class SettingsViewModel : androidx.lifecycle.ViewModel() {
             overlayEnabled = saved.overlayEnabled,
             debugMode = saved.debugMode,
             setupCompleted = saved.setupCompleted,
-            darkModeEnabled = saved.darkModeEnabled
+            themeMode = saved.themeMode,
+            pureBlackEnabled = saved.pureBlackEnabled,
+            liquidGlassEnabled = saved.liquidGlassEnabled
         )
     }
 }
@@ -195,7 +237,7 @@ class SettingsViewModel : androidx.lifecycle.ViewModel() {
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel(),
-    onBackPressed: () -> Unit,
+    onBackPressed: () -> Unit = {},
     settingsRepository: SettingsRepository? = null,
     onRequestPermissions: (Array<String>) -> Unit = {},
     refreshTrigger: MutableIntState = mutableIntStateOf(0)
@@ -234,44 +276,49 @@ fun SettingsScreen(
     var showSimPicker by remember { mutableStateOf(false) }
     var showClearDataConfirm by remember { mutableStateOf(false) }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        AnimatedContourBackground(modifier = Modifier.fillMaxSize())
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = {
+            FloatingBottomNavBar(currentTab = NavigationTab.SETTINGS)
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            AnimatedContourBackground(modifier = Modifier.fillMaxSize())
 
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Top Bar
-            TopAppBar(
-                title = {
-                    com.proximity.app.ui.components.ProximityBrandedHeader(
-                        fontSize = 20.sp,
-                        logoSize = 28.dp
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackPressed) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.settings_back),
-                            tint = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-
-            // Settings Content
-            LazyColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 32.dp)
+                    .statusBarsPadding()
             ) {
+                // Top Bar
+                TopAppBar(
+                    title = {
+                        com.proximity.app.ui.components.ProximityBrandedHeader(
+                            fontSize = 20.sp,
+                            logoSize = 28.dp
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent
+                    )
+                )
+
+                // Settings Content
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(
+                        top = 8.dp,
+                        bottom = innerPadding.calculateBottomPadding() + 24.dp
+                    )
+                ) {
                 item { SectionHeader("CONFIGURATION") }
                 item {
                     GroupCard {
@@ -295,16 +342,99 @@ fun SettingsScreen(
                 item { SectionHeader("APPEARANCE") }
                 item {
                     GroupCard {
-                        ToggleRow(
-                            icon = if (state.darkModeEnabled) Icons.Default.DarkMode else Icons.Default.LightMode,
-                            title = "Theme",
-                            subtitle = if (state.darkModeEnabled) "Dark theme enabled" else "Light theme enabled",
-                            checked = state.darkModeEnabled,
-                            onCheckedChange = {
-                                viewModel.toggleDarkMode()
-                                settingsRepository?.saveSettings(
-                                    settingsRepository.settingsFlow.value.copy(darkModeEnabled = !state.darkModeEnabled)
+                        // 3-Segment Theme Selector
+                        Column(modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(accent.primary.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_appearance),
+                                        contentDescription = null,
+                                        tint = accent.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Theme Mode",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = when (state.themeMode) {
+                                            ThemeMode.SYSTEM -> "Follows device system settings"
+                                            ThemeMode.LIGHT -> "Always light"
+                                            ThemeMode.DARK -> "Always dark"
+                                        },
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            ThemeModeSelector(
+                                currentMode = state.themeMode,
+                                onModeSelected = { newMode ->
+                                    viewModel.setThemeMode(newMode)
+                                    settingsRepository?.let { repo ->
+                                        repo.saveSettings(repo.settingsFlow.value.copy(themeMode = newMode))
+                                    }
+                                }
+                            )
+                        }
+
+                        // OLED Pure Black (visible when dark mode is effectively active)
+                        val isSystemDark = isSystemInDarkTheme()
+                        val isDarkEffective = state.themeMode == ThemeMode.DARK ||
+                            (state.themeMode == ThemeMode.SYSTEM && isSystemDark)
+
+                        AnimatedVisibility(
+                            visible = isDarkEffective,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut()
+                        ) {
+                            Column {
+                                GroupDivider()
+                                ToggleRow(
+                                    icon = Icons.Default.Brightness2,
+                                    title = "OLED Pure Black",
+                                    subtitle = "Pitch black surfaces for OLED battery saving",
+                                    checked = state.pureBlackEnabled,
+                                    onCheckedChange = { checked ->
+                                        viewModel.togglePureBlack()
+                                        settingsRepository?.let { repo ->
+                                            repo.saveSettings(repo.settingsFlow.value.copy(pureBlackEnabled = checked))
+                                        }
+                                    }
                                 )
+                            }
+                        }
+
+                        GroupDivider()
+
+                        // Liquid Glass Toggle
+                        ToggleRow(
+                            icon = Icons.Default.BlurOn,
+                            title = "Liquid Glass",
+                            subtitle = "Frosted specular glass surfaces & blur",
+                            checked = state.liquidGlassEnabled,
+                            onCheckedChange = { checked ->
+                                viewModel.toggleLiquidGlass()
+                                settingsRepository?.let { repo ->
+                                    repo.saveSettings(repo.settingsFlow.value.copy(liquidGlassEnabled = checked))
+                                }
                             }
                         )
                     }
@@ -315,7 +445,7 @@ fun SettingsScreen(
                 item {
                     GroupCard {
                         PermissionRow(
-                            icon = Icons.Default.Phone,
+                            iconRes = R.drawable.ic_phone_call,
                             title = "Phone",
                             subtitle = "Calls & phone state",
                             granted = state.permissions["phone"] ?: false,
@@ -330,7 +460,7 @@ fun SettingsScreen(
                         )
                         GroupDivider()
                         PermissionRow(
-                            icon = Icons.Default.CameraAlt,
+                            iconRes = R.drawable.ic_camera,
                             title = "Camera",
                             subtitle = "QR code scanning",
                             granted = state.permissions["camera"] ?: false,
@@ -393,6 +523,7 @@ fun SettingsScreen(
                 item { Spacer(modifier = Modifier.height(16.dp)) }
             }
         }
+    }
     }
 
     // Bank Picker Dialog
@@ -507,11 +638,68 @@ private fun SectionHeader(title: String) {
 }
 
 @Composable
+private fun ThemeModeSelector(
+    currentMode: ThemeMode,
+    onModeSelected: (ThemeMode) -> Unit
+) {
+    val modes = listOf(
+        ThemeMode.SYSTEM to "System",
+        ThemeMode.LIGHT to "Light",
+        ThemeMode.DARK to "Dark"
+    )
+    val accent = LocalProximityAccentTheme.current
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+            .border(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                RoundedCornerShape(12.dp)
+            )
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        modes.forEach { (mode, label) ->
+            val isSelected = currentMode == mode
+            val bgColor by animateColorAsState(
+                targetValue = if (isSelected) accent.primary else Color.Transparent,
+                label = "theme_tab_bg"
+            )
+            val textColor by animateColorAsState(
+                targetValue = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                label = "theme_tab_text"
+            )
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(bgColor)
+                    .clickable { onModeSelected(mode) }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = label,
+                    fontSize = 13.sp,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                    color = textColor
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun GroupCard(content: @Composable ColumnScope.() -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(4.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .liquidGlass(shape = RoundedCornerShape(16.dp))
     ) {
         Column(content = content)
     }
@@ -543,7 +731,8 @@ private fun SettingsRow(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp)
+            .then(if (onClick != null) Modifier.semantics(mergeDescendants = true) { } else Modifier),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Icon
@@ -604,7 +793,8 @@ private fun SettingsRow(
 
 @Composable
 private fun ToggleRow(
-    icon: ImageVector,
+    icon: ImageVector? = null,
+    iconRes: Int? = null,
     title: String,
     subtitle: String? = null,
     checked: Boolean,
@@ -626,12 +816,21 @@ private fun ToggleRow(
                 .background(accent.primary.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = accent.primary,
-                modifier = Modifier.size(16.dp)
-            )
+            if (iconRes != null) {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = null,
+                    tint = accent.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            } else if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accent.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.width(12.dp))
@@ -667,7 +866,8 @@ private fun ToggleRow(
 
 @Composable
 private fun PermissionRow(
-    icon: ImageVector,
+    icon: ImageVector? = null,
+    iconRes: Int? = null,
     title: String,
     subtitle: String,
     granted: Boolean,
@@ -689,12 +889,21 @@ private fun PermissionRow(
                 .background(accent.primary.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = accent.primary,
-                modifier = Modifier.size(16.dp)
-            )
+            if (iconRes != null) {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = null,
+                    tint = accent.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            } else if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accent.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.width(12.dp))

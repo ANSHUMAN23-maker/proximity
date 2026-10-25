@@ -8,6 +8,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -201,18 +204,26 @@ private fun PaymentProgressScreen(
                 verticalArrangement = Arrangement.Center
             ) {
 
-                                AnimatedContent(
-                                    targetState = phase,
-                                    transitionSpec = { fadeIn() togetherWith fadeOut() },
-                                    label = "lottie_phase"
-                                ) { currentPhase ->
-                                    when (currentPhase) {
-                                        ProgressPhase.CONNECTING -> SmoothPulseAnimation(modifier = Modifier.size(150.dp))
-                                        ProgressPhase.CALL_ACTIVE -> SmoothPulseAnimation(modifier = Modifier.size(150.dp))
-                                        ProgressPhase.WAITING_FOR_SMS -> SmoothPulseAnimation(modifier = Modifier.size(150.dp))
-                                        ProgressPhase.ENDING -> SmoothPulseAnimation(modifier = Modifier.size(150.dp))
-                                    }
-                                }
+                                val displayPhase = when (phase) {
+                    ProgressPhase.CONNECTING -> PaymentDisplayPhase.CONNECTING
+                    ProgressPhase.CALL_ACTIVE -> PaymentDisplayPhase.CALL_ACTIVE
+                    ProgressPhase.WAITING_FOR_SMS -> PaymentDisplayPhase.WAITING_FOR_SMS
+                    ProgressPhase.ENDING -> PaymentDisplayPhase.ENDING
+                }
+
+                AnimatedContent(
+                    targetState = displayPhase,
+                    transitionSpec = {
+                        (fadeIn(tween(350)) + scaleIn(initialScale = 0.88f))
+                            .togetherWith(fadeOut(tween(250)) + scaleOut(targetScale = 1.08f))
+                    },
+                    label = "paymentPhaseTransition"
+                ) { currentDisplayPhase ->
+                    PaymentPhaseVisualizer(
+                        phase = currentDisplayPhase,
+                        modifier = Modifier.size(160.dp)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(32.dp))
                 Text(

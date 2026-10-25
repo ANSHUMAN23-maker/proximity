@@ -1,4 +1,6 @@
 package com.proximity.app.features.qr_scanner.presentation
+import androidx.compose.ui.res.painterResource
+import com.proximity.app.R
 
 import android.Manifest
 import android.content.BroadcastReceiver
@@ -30,6 +32,12 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.core.*
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -45,7 +53,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -56,7 +63,6 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.proximity.app.ProximityApplication
-import com.proximity.app.R
 import com.proximity.app.data.TransactionSource
 import com.proximity.app.data.UPIData
 import com.proximity.app.ui.components.AnimatedContourBackground
@@ -633,65 +639,121 @@ fun ScannerOverlay(
     onFlashClick: () -> Unit,
     onGalleryClick: () -> Unit
 ) {
+    val accent = LocalProximityAccentTheme.current.primary
+
+    val infiniteTransition = rememberInfiniteTransition(label = "scannerLaser")
+    val laserProgress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "laserProgress"
+    )
+
+    // Reticle lock-on spring scale on detection
+    val bracketInset by animateDpAsState(
+        targetValue = if (state.isProcessing) 6.dp else 0.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "bracketLock"
+    )
+    val bracketColor by animateColorAsState(
+        targetValue = if (state.isProcessing) accent else Color.White,
+        animationSpec = tween(durationMillis = 200),
+        label = "bracketColor"
+    )
+
     Box(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-        // Scrim
+        // Scrim & Brackets
         Canvas(modifier = Modifier.fillMaxSize()) {
             val canvasWidth = size.width
             val canvasHeight = size.height
-            val rectSize = 260.dp.toPx()
-            val rectLeft = (canvasWidth - rectSize) / 2
-            val rectTop = (canvasHeight - rectSize) / 2
+            val baseRectSize = 260.dp.toPx()
+            val baseRectLeft = (canvasWidth - baseRectSize) / 2
+            val baseRectTop = (canvasHeight - baseRectSize) / 2
 
             drawRect(color = Color(0x99000000))
             drawRect(
                 color = Color.Transparent,
-                topLeft = Offset(rectLeft, rectTop),
-                size = Size(rectSize, rectSize),
+                topLeft = Offset(baseRectLeft, baseRectTop),
+                size = Size(baseRectSize, baseRectSize),
                 blendMode = androidx.compose.ui.graphics.BlendMode.Clear
             )
 
-            // Draw brackets
+            // Draw brackets (with lock-on contraction and color morph)
+            val currentRectSize = (260.dp - (bracketInset * 2)).toPx()
+            val rectLeft = (canvasWidth - currentRectSize) / 2
+            val rectTop = (canvasHeight - currentRectSize) / 2
             val bracketLen = 32.dp.toPx()
             val strokeWidth = 4.dp.toPx()
-            val color = Color.White
+            val color = bracketColor
 
             // Top Left
             drawLine(color, Offset(rectLeft, rectTop), Offset(rectLeft + bracketLen, rectTop), strokeWidth)
             drawLine(color, Offset(rectLeft, rectTop), Offset(rectLeft, rectTop + bracketLen), strokeWidth)
             // Top Right
-            drawLine(color, Offset(rectLeft + rectSize, rectTop), Offset(rectLeft + rectSize - bracketLen, rectTop), strokeWidth)
-            drawLine(color, Offset(rectLeft + rectSize, rectTop), Offset(rectLeft + rectSize, rectTop + bracketLen), strokeWidth)
+            drawLine(color, Offset(rectLeft + currentRectSize, rectTop), Offset(rectLeft + currentRectSize - bracketLen, rectTop), strokeWidth)
+            drawLine(color, Offset(rectLeft + currentRectSize, rectTop), Offset(rectLeft + currentRectSize, rectTop + bracketLen), strokeWidth)
             // Bottom Left
-            drawLine(color, Offset(rectLeft, rectTop + rectSize), Offset(rectLeft + bracketLen, rectTop + rectSize), strokeWidth)
-            drawLine(color, Offset(rectLeft, rectTop + rectSize), Offset(rectLeft, rectTop + rectSize - bracketLen), strokeWidth)
+            drawLine(color, Offset(rectLeft, rectTop + currentRectSize), Offset(rectLeft + bracketLen, rectTop + currentRectSize), strokeWidth)
+            drawLine(color, Offset(rectLeft, rectTop + currentRectSize), Offset(rectLeft, rectTop + currentRectSize - bracketLen), strokeWidth)
             // Bottom Right
-            drawLine(color, Offset(rectLeft + rectSize, rectTop + rectSize), Offset(rectLeft + rectSize - bracketLen, rectTop + rectSize), strokeWidth)
-            drawLine(color, Offset(rectLeft + rectSize, rectTop + rectSize), Offset(rectLeft + rectSize, rectTop + rectSize - bracketLen), strokeWidth)
+            drawLine(color, Offset(rectLeft + currentRectSize, rectTop + currentRectSize), Offset(rectLeft + currentRectSize - bracketLen, rectTop + currentRectSize), strokeWidth)
+            drawLine(color, Offset(rectLeft + currentRectSize, rectTop + currentRectSize), Offset(rectLeft + currentRectSize, rectTop + currentRectSize - bracketLen), strokeWidth)
         }
 
-        // Bouncing Line
-        val infiniteTransition = rememberInfiniteTransition()
-        val lineOffset by infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 260f - 24f, // 260dp square size minus some margin
-            animationSpec = infiniteRepeatable(
-                animation = tween(2000, easing = LinearOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse
-            )
-        )
+        // 120 FPS Laser Sheet with graphicsLayer
+        val density = LocalDensity.current
+        val boxHeightPx = with(density) { 260.dp.toPx() }
+        val laserHeightPx = with(density) { 28.dp.toPx() }
+        val travelDistancePx = boxHeightPx - laserHeightPx
 
         Box(
-            modifier = Modifier.align(Alignment.Center)
+            modifier = Modifier
+                .align(Alignment.Center)
                 .size(260.dp)
-                .padding(12.dp)
+                .clipToBounds()
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(2.dp)
-                    .offset(y = lineOffset.dp)
-                    .background(ElectricIndigo)
-            )
+                    .height(28.dp)
+                    .graphicsLayer {
+                        translationY = laserProgress * travelDistancePx
+                    }
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                accent.copy(alpha = 0.12f),
+                                accent.copy(alpha = 0.40f)
+                            )
+                        )
+                    )
+            ) {
+                // Leading bright laser line at bottom of gradient trail
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.5.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    accent,
+                                    Color.White,
+                                    accent,
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+            }
         }
 
         // Top bar
@@ -700,7 +762,7 @@ fun ScannerOverlay(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBackClick) {
-                Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(painter = painterResource(id = R.drawable.ic_back_arrow), contentDescription = "Back", tint = Color.White)
             }
         }
 
@@ -715,7 +777,7 @@ fun ScannerOverlay(
 
         // Processing
         if (state.isProcessing) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = ElectricIndigo)
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = accent)
             Text(
                 text = stringResource(R.string.qr_processing),
                 color = Color.White,

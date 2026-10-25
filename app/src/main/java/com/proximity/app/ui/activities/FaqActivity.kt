@@ -1,4 +1,6 @@
 package com.proximity.app.ui.activities
+import androidx.compose.ui.res.painterResource
+import com.proximity.app.R
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -34,10 +36,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.proximity.app.ProximityApplication
-import com.proximity.app.R
 import com.proximity.app.ui.components.AnimatedContourBackground
 import com.proximity.app.ui.components.pressScale
 import com.proximity.app.ui.theme.LocalProximityAccentTheme
+import com.proximity.app.ui.components.liquidGlass
+import com.proximity.app.ui.theme.LocalGlassEnabled
+
 import com.proximity.app.ui.theme.ProximityTheme
 import com.proximity.app.ui.theme.TealAccentTheme
 
@@ -52,6 +56,8 @@ class FaqActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
 
         val app = application as? ProximityApplication
         val settingsRepository = app?.settingsRepository ?: com.proximity.app.data.SettingsRepository(applicationContext)
@@ -59,7 +65,11 @@ class FaqActivity : ComponentActivity() {
         setContent {
             val savedSettings by settingsRepository.settingsFlow.collectAsState()
             CompositionLocalProvider(LocalProximityAccentTheme provides TealAccentTheme) {
-                ProximityTheme(darkTheme = savedSettings.darkModeEnabled) {
+                ProximityTheme(
+                    themeMode = savedSettings.themeMode,
+                    pureBlack = savedSettings.pureBlackEnabled,
+                    liquidGlass = savedSettings.liquidGlassEnabled
+                ) {
                     FaqScreen(
                         onBack = { finish() }
                     )
@@ -170,14 +180,14 @@ fun FaqScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            painter = painterResource(id = R.drawable.ic_back_arrow),
                             contentDescription = "Back",
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = Color.Transparent
                 )
             )
         },
@@ -200,10 +210,21 @@ fun FaqScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Search Bar
+                val isGlass = LocalGlassEnabled.current
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (isGlass) {
+                                Modifier.liquidGlass(
+                                    shape = RoundedCornerShape(14.dp),
+                                    isGlassEnabled = true,
+                                    borderWidth = 1.dp
+                                )
+                            } else Modifier
+                        ),
                     placeholder = {
                         Text(
                             text = "Search questions or keywords...",
@@ -220,13 +241,13 @@ fun FaqScreen(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        focusedBorderColor = accent.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        focusedBorderColor = if (isGlass) Color.Transparent else accent.primary,
+                        unfocusedBorderColor = if (isGlass) Color.Transparent else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                         cursorColor = accent.primary,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                        focusedContainerColor = if (isGlass) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        unfocusedContainerColor = if (isGlass) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                     ),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(14.dp),
                     singleLine = true
                 )
 
@@ -282,24 +303,30 @@ fun FaqExpandableCard(
     onToggle: () -> Unit
 ) {
     val accent = LocalProximityAccentTheme.current
+    val isGlass = LocalGlassEnabled.current
 
-    Surface(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .pressScale(onClick = onToggle)
+            .liquidGlass(
+                shape = RoundedCornerShape(16.dp),
+                isGlassEnabled = isGlass,
+                customBorderBrush = if (isExpanded && isGlass) {
+                    androidx.compose.ui.graphics.Brush.linearGradient(
+                        listOf(
+                            accent.primary.copy(alpha = 0.85f),
+                            accent.primaryDark.copy(alpha = 0.40f)
+                        )
+                    )
+                } else null
+            )
             .animateContentSize(
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioLowBouncy,
                     stiffness = Spring.StiffnessLow
                 )
-            ),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (isExpanded) accent.primary.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-        ),
-        shadowElevation = 0.dp
+            )
     ) {
         Column(
             modifier = Modifier
@@ -331,7 +358,7 @@ fun FaqExpandableCard(
 
             if (isExpanded) {
                 Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = faq.answer,

@@ -2,6 +2,8 @@
 // Copyright 2026 Proximity
 
 package com.proximity.app.ui.components
+import androidx.compose.ui.res.painterResource
+import com.proximity.app.R
 
 import android.content.Intent
 import android.provider.Settings
@@ -43,7 +45,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.proximity.app.R
 import com.proximity.app.network.WalledGardenResult
 import com.proximity.app.ui.activities.RechargeWebActivity
 import com.proximity.app.ui.theme.ProximityBrandAccent
@@ -126,7 +127,7 @@ fun WalledGardenBanner(
                                 )
                             }
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                painter = painterResource(id = R.drawable.ic_forward_arrow),
                                 contentDescription = null,
                                 tint = ProximityBrandAccent,
                                 modifier = Modifier.padding(start = 8.dp)

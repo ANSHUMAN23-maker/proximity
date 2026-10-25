@@ -1,4 +1,6 @@
 package com.proximity.app.ui.activities
+import androidx.compose.ui.res.painterResource
+import com.proximity.app.R
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -341,7 +343,7 @@ For transaction disputes, please contact your bank or NPCI's grievance redressal
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            painter = painterResource(id = R.drawable.ic_back_arrow),
                             contentDescription = "Back",
                             tint = MaterialTheme.colorScheme.onBackground
                         )
