@@ -246,9 +246,21 @@ fun SettingsScreen(
     val accent = LocalProximityAccentTheme.current
     val state = viewModel.state
 
+    // Get primary SIM name from settings repository (in-memory, avoids StrictMode disk read)
+    var primarySimId by remember {
+        val op = settingsRepository?.settingsFlow?.value?.selectedOperator
+        mutableStateOf(if (op != null && op != "unknown") op else "")
+    }
+
     // Load settings from repository on first composition
     LaunchedEffect(Unit) {
-        settingsRepository?.let { viewModel.loadFromRepository(it) }
+        settingsRepository?.let { repo ->
+            viewModel.loadFromRepository(repo)
+            val op = repo.settingsFlow.value.selectedOperator
+            if (op.isNotBlank() && op != "unknown") {
+                primarySimId = op
+            }
+        }
         viewModel.refreshPermissions(context)
     }
 
@@ -256,12 +268,6 @@ fun SettingsScreen(
     val trigger by refreshTrigger
     LaunchedEffect(trigger) {
         viewModel.refreshPermissions(context)
-    }
-
-    // Get primary SIM name from shared prefs (reactive)
-    var primarySimId by remember {
-        val prefs = context.getSharedPreferences("ProximityPrefs", Context.MODE_PRIVATE)
-        mutableStateOf(prefs.getString("selected_primary_sim", "") ?: "")
     }
     val primarySim = when (primarySimId) {
         "jio" -> "Jio"
@@ -550,8 +556,9 @@ fun SettingsScreen(
             selectedSimId = primarySimId,
             onSimSelected = { simId ->
                 primarySimId = simId
-                context.getSharedPreferences("ProximityPrefs", Context.MODE_PRIVATE)
-                    .edit().putString("selected_primary_sim", simId).apply()
+                settingsRepository?.let { repo ->
+                    repo.saveSettings(repo.settingsFlow.value.copy(selectedOperator = simId))
+                }
                 showSimPicker = false
             },
             onDismiss = { showSimPicker = false }
