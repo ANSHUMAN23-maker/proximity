@@ -33,7 +33,8 @@ class SettingsRepository(private val context: Context) {
         val selectedOperator: String = "unknown",
         val themeMode: ThemeMode = ThemeMode.SYSTEM,
         val pureBlackEnabled: Boolean = false,
-        val liquidGlassEnabled: Boolean = true
+        val liquidGlassEnabled: Boolean = true,
+        val ussdAccessibilityEnabled: Boolean = false
     ) {
         // Backward compatibility helper for existing callers
         val darkModeEnabled: Boolean
@@ -52,6 +53,7 @@ class SettingsRepository(private val context: Context) {
             putString("theme_mode", settings.themeMode.name)
             putBoolean("pure_black_enabled", settings.pureBlackEnabled)
             putBoolean("liquid_glass_enabled", settings.liquidGlassEnabled)
+            putBoolean("ussd_accessibility_enabled", settings.ussdAccessibilityEnabled)
             putBoolean("dark_mode_enabled", settings.themeMode == ThemeMode.DARK)
         }
 
@@ -89,7 +91,8 @@ class SettingsRepository(private val context: Context) {
             selectedOperator = simPrefs.getString("selected_primary_sim", "unknown") ?: "unknown",
             themeMode = resolvedThemeMode,
             pureBlackEnabled = prefs.getBoolean("pure_black_enabled", false),
-            liquidGlassEnabled = prefs.getBoolean("liquid_glass_enabled", true)
+            liquidGlassEnabled = prefs.getBoolean("liquid_glass_enabled", true),
+            ussdAccessibilityEnabled = prefs.getBoolean("ussd_accessibility_enabled", false)
         )
     }
 

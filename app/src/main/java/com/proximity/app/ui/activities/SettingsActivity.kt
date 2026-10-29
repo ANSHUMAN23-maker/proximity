@@ -132,6 +132,7 @@ data class SettingsState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val pureBlackEnabled: Boolean = false,
     val liquidGlassEnabled: Boolean = true,
+    val ussdAccessibilityEnabled: Boolean = false,
     val permissions: Map<String, Boolean> = emptyMap()
 ) {
     val darkModeEnabled: Boolean
@@ -182,6 +183,10 @@ class SettingsViewModel : androidx.lifecycle.ViewModel() {
         state = state.copy(liquidGlassEnabled = !state.liquidGlassEnabled)
     }
 
+    fun toggleUssdAccessibility() {
+        state = state.copy(ussdAccessibilityEnabled = !state.ussdAccessibilityEnabled)
+    }
+
     fun toggleDarkMode() {
         val nextMode = if (state.themeMode == ThemeMode.DARK) ThemeMode.LIGHT else ThemeMode.DARK
         state = state.copy(themeMode = nextMode)
@@ -228,7 +233,8 @@ class SettingsViewModel : androidx.lifecycle.ViewModel() {
             setupCompleted = saved.setupCompleted,
             themeMode = saved.themeMode,
             pureBlackEnabled = saved.pureBlackEnabled,
-            liquidGlassEnabled = saved.liquidGlassEnabled
+            liquidGlassEnabled = saved.liquidGlassEnabled,
+            ussdAccessibilityEnabled = saved.ussdAccessibilityEnabled
         )
     }
 }
@@ -440,6 +446,37 @@ fun SettingsScreen(
                                 viewModel.toggleLiquidGlass()
                                 settingsRepository?.let { repo ->
                                     repo.saveSettings(repo.settingsFlow.value.copy(liquidGlassEnabled = checked))
+                                }
+                            }
+                        )
+
+                        GroupDivider()
+
+                        // USSD Accessibility Service Toggle
+                        val manager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as android.view.accessibility.AccessibilityManager
+                        val services = manager.getEnabledAccessibilityServiceList(android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+                        val accessibilityEnabled = services.any { it.id == "${context.packageName}/.accessibility.UssdAccessibilityService" }
+                        ToggleRow(
+                            icon = Icons.Default.Accessibility,
+                            title = stringResource(R.string.settings_ussd_accessibility_title),
+                            subtitle = if (accessibilityEnabled) {
+                                stringResource(R.string.settings_ussd_accessibility_subtitle)
+                            } else {
+                                stringResource(R.string.settings_ussd_accessibility_not_enabled)
+                            },
+                            checked = state.ussdAccessibilityEnabled,
+                            onCheckedChange = { checked ->
+                                // Always save the user's preference first
+                                viewModel.toggleUssdAccessibility()
+                                settingsRepository?.let { repo ->
+                                    repo.saveSettings(repo.settingsFlow.value.copy(ussdAccessibilityEnabled = checked))
+                                }
+                                if (checked && !accessibilityEnabled) {
+                                    // Open system accessibility settings if enabling but service not yet enabled
+                                    val intent = Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    context.startActivity(intent)
                                 }
                             }
                         )

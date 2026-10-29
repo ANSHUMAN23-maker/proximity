@@ -47,7 +47,7 @@ class SmsParsingRegexTest {
     @Test
     fun `Axis Bank with rupee symbol`() {
         val sender = "AX-AXISBK"
-        val body = "â‚¹ 250.00 paid to merchant from Axis Bank A/c. UPI Ref: 99887766"
+        val body = "₹ 250.00 paid to merchant from Axis Bank A/c. UPI Ref: 99887766"
         assertEquals("Axis Bank", SmsTransactionParser.detectBank(sender, body))
         assertEquals("250.00", SmsTransactionParser.extractAmount(body))
     }

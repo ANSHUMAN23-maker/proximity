@@ -256,7 +256,7 @@ class SmsTransactionParserTest {
     fun `amount formats â€” Rs, INR, rupee symbol, and Indian lakh grouping`() {
         assertEquals("500.00", SmsTransactionParser.extractAmount("Rs.500.00 sent to KIRANA STORE"))
         assertEquals("1250.50", SmsTransactionParser.extractAmount("INR 1,250.50 credited"))
-        assertEquals("250.00", SmsTransactionParser.extractAmount("â‚¹250.00 paid to merchant"))
+        assertEquals("250.00", SmsTransactionParser.extractAmount("₹250.00 paid to merchant"))
         // Indian numbering groups by lakh/crore after the first three digits.
         assertEquals("100000.00", SmsTransactionParser.extractAmount("Rs 1,00,000.00 transferred to merchant"))
     }

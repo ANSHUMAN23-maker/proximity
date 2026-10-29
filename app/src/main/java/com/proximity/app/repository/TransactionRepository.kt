@@ -133,6 +133,22 @@ class TransactionRepository private constructor(context: Context) :
         return transactionDao.deleteStalePending(now)
     }
 
+    override suspend fun updateVerifiedPayment(
+        transactionId: String,
+        status: String,
+        amount: String,
+        bankRef: String?,
+        verifiedAt: Long
+    ): Int {
+        return transactionDao.updateVerifiedPayment(
+            transactionId = transactionId,
+            status = status,
+            amount = amount,
+            bankRef = bankRef,
+            verifiedAt = verifiedAt
+        )
+    }
+
     override suspend fun deletePending(transactionId: String): Int {
         return transactionDao.deletePending(transactionId)
     }

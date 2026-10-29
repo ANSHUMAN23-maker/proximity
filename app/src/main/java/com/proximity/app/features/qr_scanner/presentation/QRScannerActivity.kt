@@ -63,6 +63,8 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.proximity.app.ProximityApplication
+import com.proximity.app.accessibility.UssdAccessibilityService
+import com.proximity.app.accessibility.UssdStatus
 import com.proximity.app.data.TransactionSource
 import com.proximity.app.data.UPIData
 import com.proximity.app.ui.components.AnimatedContourBackground
@@ -79,6 +81,7 @@ import com.proximity.app.helpers.TransactionDetector
 import com.proximity.app.managers.PermissionManager
 import com.proximity.app.payment.PaymentSessionManager
 import com.proximity.app.ui.theme.*
+import com.proximity.app.ui.activities.PaymentResultActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -113,6 +116,7 @@ class QRScannerActivity : ComponentActivity() {
         private const val WAITING_SCREEN_TIMEOUT_MS = PaymentSessionManager.DEFAULT_VERIFICATION_DEADLINE_MS
         private const val WAITING_SCREEN_EXIT_DELAY_MS = 2000L
         private const val GALLERY_MAX_EDGE_PX = 2048
+        private const val TAG = "QRScannerActivity"
     }
 
     private val _uiState = MutableStateFlow(QRScannerState())
@@ -342,13 +346,36 @@ class QRScannerActivity : ComponentActivity() {
     }
 
     private fun beginQrPaymentSession(upiData: UPIData): Boolean {
-        val sessionManager = ProximityApplication.from(this)?.paymentSessionManager
-        val sessionTxnId = sessionManager?.begin("", upiData.amount ?: "", upiData.vpa, TransactionSource.QR)
+        val sessionManager = ProximityApplication.from(this)?.paymentSessionManager ?: return false
+
+        val sessionTxnId = sessionManager.begin("", upiData.amount ?: "", upiData.vpa, TransactionSource.QR)
+
+        // Wire up USSD accessibility callback for QR payment flow
+        UssdAccessibilityService.ussdCallback = { result ->
+            runOnUiThread {
+                if (result.status == UssdStatus.SUCCESS) {
+                    Log.d(TAG, "Accessibility detected USSD payment success: amount=${result.amount}, ref=${result.reference}")
+
+                    sessionManager.onUserConfirmedSuccess(result.amount, result.reference)
+
+                    val intent = Intent(this@QRScannerActivity, PaymentResultActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        putExtra("amount", result.amount ?: upiData.amount ?: "0")
+                        putExtra("phone_number", upiData.vpa ?: "")
+                        putExtra("transaction_id", result.reference ?: "")
+                        putExtra("status", "SUCCESS")
+                    }
+                    startActivity(intent)
+                    finish()
+                }
+            }
+        }
+
         return try {
             TransactionDetector.getInstance(this).startOperation("QR_SCAN", upiData.amount, sessionTxnId)
             true
         } catch (e: IllegalStateException) {
-            sessionManager?.onDialFailed("Could not start SMS monitoring")
+            sessionManager.onDialFailed("Could not start SMS monitoring")
             showError(getString(R.string.error_payment_init_failed))
             false
         }

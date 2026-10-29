@@ -26,11 +26,13 @@ data class Transaction(
     val verifiedAt: Long? = null
 ) {
     fun toPaymentDetails(): PaymentDetails {
+        // Strip comma thousand separators (e.g., "1,500" -> "1500") before parsing
+        val cleanAmount = amount.replace(",", "")
         return PaymentDetails(
             id = transactionId,
             recipientName = recipientName,
             phoneNumber = phoneNumber ?: "",
-            amount = amount.toDoubleOrNull() ?: 0.0,
+            amount = cleanAmount.toDoubleOrNull() ?: 0.0,
             timestamp = timestamp,
             status = when (status.uppercase()) {
                 "SUCCESS", "SUCCESSFUL", "COMPLETED" -> PaymentStatus.COMPLETED

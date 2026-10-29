@@ -202,6 +202,12 @@
             android:theme="@style/Theme.Proximity"
             android:screenOrientation="portrait" />
 
+        <!-- Foreground service that shows payment progress overlay on top of other apps during USSD payments -->
+        <service
+            android:name=".overlay.OverlayWindowService"
+            android:foregroundServiceType="mediaProjection"
+            android:exported="false" />
+
     </application>
 
 </manifest>

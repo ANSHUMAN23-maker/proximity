@@ -316,4 +316,12 @@
     <string name="ussd_accessibility_no_payment">No payment confirmation found in USSD dialog.</string>
     <string name="ussd_accessibility_not_enabled">Accessibility Service not enabled. Please enable it in Settings to confirm USSD payments.</string>
     <string name="ussd_accessibility_settings">Open Accessibility Settings</string>
+    <!-- USSD Accessibility toggle in app settings -->
+    <string name="settings_ussd_accessibility_title">USSD Accessibility Service</string>
+    <string name="settings_ussd_accessibility_subtitle">Reads USSD payment dialog to confirm successful payments</string>
+    <string name="settings_ussd_accessibility_not_enabled">Accessibility Service not enabled. Open settings to turn it on.</string>
+
+    <!-- Overlay window -->
+    <string name="overlay_amount_label">₹%1$s</string>
+
 </resources>

@@ -55,7 +55,7 @@ interface TransactionDao {
     @Query("SELECT COUNT(*) FROM transactions")
     suspend fun getTransactionCount(): Int
 
-    @Query("SELECT SUM(CAST(amount AS REAL)) FROM transactions WHERE status IN ('SUCCESS', 'SUCCESSFUL', 'COMPLETED')")
+    @Query("SELECT SUM(CAST(REPLACE(amount, ',', '') AS REAL)) FROM transactions WHERE status IN ('SUCCESS', 'SUCCESSFUL', 'COMPLETED')")
     suspend fun getTotalAmount(): Double?
 
     @Query("SELECT * FROM transactions WHERE timestamp BETWEEN :startTime AND :endTime ORDER BY timestamp DESC")
@@ -86,6 +86,18 @@ interface TransactionDao {
         amount: String,
         verifiedAt: Long,
         expectedStatus: String
+    ): Int
+
+    @Query(
+        "UPDATE transactions SET status = :status, amount = :amount, bankRef = :bankRef, " +
+            "verifiedAt = :verifiedAt WHERE transactionId = :transactionId AND status = 'PENDING'"
+    )
+    suspend fun updateVerifiedPayment(
+        transactionId: String,
+        status: String,
+        amount: String,
+        bankRef: String?,
+        verifiedAt: Long
     ): Int
 
     @Query("DELETE FROM transactions WHERE status = 'PENDING' AND deadlineAt IS NOT NULL AND deadlineAt < :now")

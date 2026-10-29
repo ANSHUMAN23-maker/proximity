@@ -76,6 +76,20 @@ private class LazyTransactionStore(private val appContext: Context) : PaymentTra
 
     override suspend fun deleteStalePending(now: Long): Int = repo().deleteStalePending(now)
 
+    override suspend fun updateVerifiedPayment(
+        transactionId: String,
+        status: String,
+        amount: String,
+        bankRef: String?,
+        verifiedAt: Long
+    ): Int = repo().updateVerifiedPayment(
+        transactionId = transactionId,
+        status = status,
+        amount = amount,
+        bankRef = bankRef,
+        verifiedAt = verifiedAt
+    )
+
     override suspend fun deletePending(transactionId: String): Int =
         repo().deletePending(transactionId)
 }

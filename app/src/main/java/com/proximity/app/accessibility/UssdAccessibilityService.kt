@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.concurrent.thread
 
 /**
  * Result of USSD dialog accessibility detection.
@@ -65,7 +66,7 @@ class UssdAccessibilityService : AccessibilityService() {
         @Volatile
         var isServiceConnected: Boolean = false
 
-        private const val MIN_EVENT_INTERVAL_MS = 500L
+        private const val MIN_EVENT_INTERVAL_MS = 300L
         @Volatile private var lastEventTime: Long = 0
     }
 
@@ -75,24 +76,27 @@ class UssdAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        Log.d(TAG, "USSD AccessibilityService connected")
+        Log.d(TAG, "=== USSDAccessibilityService onServiceConnected ===")
         isServiceConnected = true
 
         val info = AccessibilityServiceInfo().apply {
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
                 AccessibilityEvent.TYPE_VIEW_FOCUSED or
-                AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED
+                AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED or
+                AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_SPOKEN or
                 AccessibilityServiceInfo.FEEDBACK_HAPTIC
             notificationTimeout = 100
-            // canRetrieveWindowContent is set via XML meta-data, not here
+            flags = AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
+                AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
         }
         setServiceInfo(info)
+        Log.d(TAG, "Service info configured with canRetrieveWindowContent=true")
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
         super.onUnbind(intent)
-        Log.d(TAG, "USSD AccessibilityService unbound")
+        Log.d(TAG, "=== USSDAccessibilityService onUnbind ===")
         isServiceConnected = false
         ussdPaymentActive = false
         return true
@@ -100,68 +104,107 @@ class UssdAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG, "USSD AccessibilityService destroyed")
+        Log.d(TAG, "=== USSDAccessibilityService onDestroy ===")
         isServiceConnected = false
         ussdPaymentActive = false
     }
 
     override fun onInterrupt() {
         // Service interrupted - reset state
-        Log.d(TAG, "USSD AccessibilityService interrupted")
+        Log.d(TAG, "=== USSDAccessibilityService onInterrupt ===")
         ussdPaymentActive = false
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         if (!ussdPaymentActive) {
+            Log.d(TAG, "Event ignored: ussdPaymentActive=false")
+            return
+        }
+
+        if (!isServiceConnected) {
+            Log.d(TAG, "Event ignored: isServiceConnected=false")
             return
         }
 
         val now = System.currentTimeMillis()
         synchronized(detectionLock) {
             if (now - lastEventTime < MIN_EVENT_INTERVAL_MS) {
+                Log.d(TAG, "Event throttled: ${now - lastEventTime}ms < ${MIN_EVENT_INTERVAL_MS}ms")
                 return
             }
             lastEventTime = now
         }
 
         val eventType = event.eventType
+        val eventTypeName = when (eventType) {
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> "WINDOW_STATE_CHANGED"
+            AccessibilityEvent.TYPE_VIEW_FOCUSED -> "VIEW_FOCUSED"
+            AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> "VIEW_TEXT_CHANGED"
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> "WINDOW_CONTENT_CHANGED"
+            else -> "UNKNOWN($eventType)"
+        }
+        Log.d(TAG, "AccessibilityEvent received: $eventTypeName")
+
         if (eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
             eventType != AccessibilityEvent.TYPE_VIEW_FOCUSED &&
-            eventType != AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED
+            eventType != AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED &&
+            eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
         ) {
             return
         }
 
         if (isDetecting) {
+            Log.d(TAG, "Detection already in progress, skipping")
             return
         }
 
         isDetecting = true
-        mainHandler.post {
+        // Capture text immediately from event source on main thread before recycling
+        val eventText = event.source?.text?.toString() ?: ""
+        Log.d(TAG, "Event source text captured immediately: $eventText")
+
+        // Process after short delay to allow dialog to fully render
+        mainHandler.postDelayed({
             try {
                 processAccessibilityEvent(event)
             } finally {
                 isDetecting = false
             }
-        }
+        }, 500L)
     }
 
     private fun processAccessibilityEvent(event: AccessibilityEvent) {
-        val root = getRootInActiveWindow() ?: return
+        Log.d(TAG, "=== Processing accessibility event ===")
 
-        // Collect text from the USSD dialog window
-        val dialogText = collectDialogText(root)
-        if (dialogText.isBlank()) {
+        val root = getRootInActiveWindow() ?: run {
+            Log.d(TAG, "getRootInActiveWindow() returned null")
             return
         }
 
-        Log.d(TAG, "USSD dialog text detected: $dialogText")
+        Log.d(TAG, "Root node obtained: class=${root.className}, text=${root.text}, desc=${root.contentDescription}")
+
+        // Collect text from the USSD dialog window
+        val dialogText = collectDialogText(root)
+        root.recycle()
+
+        if (dialogText.isBlank()) {
+            Log.d(TAG, "Dialog text is blank, skipping")
+            return
+        }
+
+        Log.d(TAG, "=== USSD Dialog Text Detected ===")
+        Log.d(TAG, "$dialogText")
+        Log.d(TAG, "=== End of Dialog Text ===")
 
         // Parse for payment result
         val result = parsePaymentResult(dialogText)
+        Log.d(TAG, "Parse result: status=${result.status}, amount=${result.amount}, ref=${result.reference}")
+
         if (result.status != UssdStatus.UNKNOWN) {
             Log.d(TAG, "USSD payment result detected: ${result.status}, amount=${result.amount}, ref=${result.reference}")
             ussdCallback?.invoke(result)
+        } else {
+            Log.d(TAG, "USSD dialog text did not match any payment result pattern")
         }
     }
 
@@ -171,7 +214,7 @@ class UssdAccessibilityService : AccessibilityService() {
     private fun collectDialogText(node: AccessibilityNodeInfo): String {
         val texts = mutableListOf<String>()
         collectTextRecursive(node, texts)
-        return texts.joinToString(" ")
+        return texts.joinToString(" | ")
     }
 
     private fun collectTextRecursive(node: AccessibilityNodeInfo, texts: MutableList<String>) {
@@ -203,17 +246,30 @@ class UssdAccessibilityService : AccessibilityService() {
     private fun parsePaymentResult(text: String): UssdAccessibilityResult {
         val lower = text.lowercase()
 
-        // Success indicators
+        // Success indicators - comprehensive list for Indian USSD responses
         val successKeywords = listOf(
             "success", "successful", "payment successful", "transaction successful",
-            "payment success", "txn successful", "debited", "credited",
-            "payment completed", "transaction completed"
+            "payment success", "txn successful", "transaction status: successful",
+            "debited", "credited", "payment completed", "transaction completed",
+            "amount debited", "amount credited", "txn status: success",
+            "payment processed", "transaction processed",
+            "succeeded", "txn succeeded", "payment succeeded", "transaction succeeded",
+            "₹ debited", "rs debited", "inr debited",
+            "transaction complete", "payment complete"
         )
 
         // Failure indicators
         val failedKeywords = listOf(
             "failed", "failure", "payment failed", "transaction failed",
-            "declined", "rejected", "insufficient", "error", "cancelled", "canceled"
+            "declined", "rejected", "insufficient", "error", "cancelled", "canceled",
+            "txn failed", "transaction failed", "payment failed",
+            "insufficient balance", "insufficient funds",
+            "invalid pin", "wrong pin", "incorrect pin",
+            "transaction declined", "payment declined",
+            "txn declined", "txn rejected",
+            "network error", "server error", "technical error",
+            "time out", "timeout", "timed out",
+            "user cancelled", "cancelled by user"
         )
 
         val isSuccess = successKeywords.any { lower.contains(it) }
@@ -226,7 +282,7 @@ class UssdAccessibilityService : AccessibilityService() {
             else -> UssdStatus.UNKNOWN
         }
 
-        // Extract amount (₹ symbol or numeric patterns)
+        // Extract amount (₹ symbol or currency patterns)
         val amount = extractAmount(text)
 
         // Extract reference number
@@ -244,18 +300,56 @@ class UssdAccessibilityService : AccessibilityService() {
      * Extracts amount from text using ₹ symbol or currency patterns.
      */
     private fun extractAmount(text: String): String? {
-        val amountRegex = Regex("""(?:₹|Rs\.?|INR|rupees?)\s*([\d,]+(?:\.\d{1,2})?)""", RegexOption.IGNORE_CASE)
-        val match = amountRegex.find(text)
-        return match?.groupValues?.getOrNull(1)
+        // Multiple patterns for Indian USSD formats
+        val patterns = listOf(
+            """(?:₹|Rs\.?|INR|rupees?)\s*([\d,]+(?:\.\d{1,2})?)""",
+            """(?:amount|amt|rs|₹)\s*:?\s*([\d,]+(?:\.\d{1,2})?)""",
+            """debited\s+(?:of\s+)?(?:₹|rs\.?|inr)?\s*([\d,]+(?:\.\d{1,2})?)""",
+            """([\d,]+(?:\.\d{1,2})?)\s*(?:debited|credited|deducted)"""
+        )
+        for (pattern in patterns) {
+            val regex = Regex(pattern, RegexOption.IGNORE_CASE)
+            val match = regex.find(text)
+            if (match != null) {
+                val value = match.groupValues.getOrNull(1)
+                if (value != null && value.isNotBlank()) {
+                    return value
+                }
+            }
+        }
+        return null
     }
 
     /**
      * Extracts transaction reference from text.
+     * Uses word boundaries to avoid matching English words like "successful", "pending",
+     * "completed" as transaction references.
      */
     private fun extractReference(text: String): String? {
-        val refRegex = Regex("""(?:ref|reference|txn|transaction|UTR|UPI|ID)[:\s#]*([A-Za-z0-9]{6,})""", RegexOption.IGNORE_CASE)
-        val match = refRegex.find(text)
-        return match?.groupValues?.getOrNull(1)
+        // Words that should NOT be treated as transaction references even if they match
+        val excludedWords = setOf(
+            "successful", "success", "failure", "failed", "pending",
+            "completed", "processed", "declined", "rejected", "cancelled",
+            "canceled", "insufficient", "error", "timeout", "transaction"
+        )
+
+        val patterns = listOf(
+            """\b(?:ref(?:erence)?|ref\s*no|reference\s*no|txn|transaction|UTR|UPI)\s+([A-Za-z0-9]{6,})""",
+            """\bUTR\s+([A-Za-z0-9]{10,})""",
+            """\b(?:ref|txn)\s*id\s+([A-Za-z0-9]{6,})"""
+        )
+        for (pattern in patterns) {
+            val regex = Regex(pattern, RegexOption.IGNORE_CASE)
+            val match = regex.find(text)
+            if (match != null) {
+                val value = match.groupValues.getOrNull(1)
+                if (value != null && value.isNotBlank() && value.length >= 6
+                    && !excludedWords.contains(value.lowercase())) {
+                    return value
+                }
+            }
+        }
+        return null
     }
 
     /**
@@ -272,6 +366,7 @@ class UssdAccessibilityService : AccessibilityService() {
      */
     fun setUssdCallback(callback: ((UssdAccessibilityResult) -> Unit)?) {
         ussdCallback = callback
+        Log.d(TAG, "USSD callback set: ${callback != null}")
     }
 
     /**
@@ -280,6 +375,8 @@ class UssdAccessibilityService : AccessibilityService() {
     fun isAccessibilityEnabled(context: Context): Boolean {
         val manager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as android.view.accessibility.AccessibilityManager
         val services = manager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-        return services.any { it.id == "${context.packageName}/.accessibility.UssdAccessibilityService" }
+        val enabled = services.any { it.id == "${context.packageName}/.accessibility.UssdAccessibilityService" }
+        Log.d(TAG, "isAccessibilityEnabled: $enabled, services found: ${services.size}")
+        return enabled
     }
 }

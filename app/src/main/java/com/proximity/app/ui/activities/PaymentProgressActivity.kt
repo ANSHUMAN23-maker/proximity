@@ -1,7 +1,11 @@
 package com.proximity.app.ui.activities
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
+import android.accessibilityservice.AccessibilityServiceInfo
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.activity.compose.setContent
@@ -25,7 +29,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
+import com.proximity.app.accessibility.UssdAccessibilityResult
+import com.proximity.app.accessibility.UssdAccessibilityService
+import com.proximity.app.accessibility.UssdStatus
 import com.proximity.app.ui.components.*
+import com.proximity.app.ui.dialogs.UssdAccessibilityConfirmDialog
 import com.proximity.app.ProximityApplication
 import com.proximity.app.R
 import com.proximity.app.payment.PaymentSessionManager
@@ -49,6 +57,17 @@ class PaymentProgressActivity : ComponentActivity() {
         const val EXTRA_AMOUNT = "amount"
     }
 
+    /** Whether the USSD accessibility confirmation dialog is currently visible. */
+    private var showUssdConfirmDialog = false
+    /** The accessibility-detected USSD result, if any. */
+    private var ussdAccessibilityResult: UssdAccessibilityResult? = null
+    /** Whether accessibility has detected a successful payment and we are awaiting user confirmation. */
+    private var ussdAccessibilityDetected = false
+    /** Whether the accessibility service enablement prompt is visible. */
+    private var showAccessibilityPrompt = false
+    /** Settings repository for reading USSD accessibility setting. */
+    private lateinit var settingsRepository: com.proximity.app.data.SettingsRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -64,7 +83,39 @@ class PaymentProgressActivity : ComponentActivity() {
             finish()
         }
 
-        val settingsRepository = app?.settingsRepository ?: com.proximity.app.data.SettingsRepository(applicationContext)
+        settingsRepository = app?.settingsRepository ?: com.proximity.app.data.SettingsRepository(applicationContext)
+
+        // Check if USSD accessibility setting is enabled in app settings
+        val ussdAccessibilitySetting = settingsRepository.settingsFlow.value.ussdAccessibilityEnabled
+        Log.d(TAG, "USSD accessibility setting: $ussdAccessibilitySetting")
+
+        // Only enable accessibility detection if the app setting is enabled
+        if (ussdAccessibilitySetting) {
+            val manager = getSystemService(Context.ACCESSIBILITY_SERVICE) as android.view.accessibility.AccessibilityManager
+            val services = manager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+            val accessibilityServiceEnabled = services.any { it.id == "${packageName}/.accessibility.UssdAccessibilityService" }
+            if (!accessibilityServiceEnabled) {
+                showAccessibilityPrompt = true
+                Log.d(TAG, "USSD Accessibility Service not enabled in Android Settings - showing prompt")
+            } else {
+                Log.d(TAG, "USSD Accessibility Service enabled - activating payment detection mode")
+                // Activate payment detection mode on the accessibility service
+                UssdAccessibilityService.ussdPaymentActive = true
+                Log.d(TAG, "USSD payment active set to: true")
+            }
+        }
+
+        // Wire up USSD accessibility callback for payment detection
+        UssdAccessibilityService.ussdCallback = { result ->
+            runOnUiThread {
+                if (result.status == UssdStatus.SUCCESS) {
+                    Log.d(TAG, "Accessibility detected USSD payment success: amount=${result.amount}, ref=${result.reference}")
+                    ussdAccessibilityResult = result
+                    ussdAccessibilityDetected = true
+                    showUssdConfirmDialog = true
+                }
+            }
+        }
 
         setContent {
             val savedSettings by settingsRepository.settingsFlow.collectAsState()
@@ -76,11 +127,96 @@ class PaymentProgressActivity : ComponentActivity() {
                         sessionManager = sessionManager,
                         coordinator = coordinator,
                         onFinish = { finish() },
-                        onNavigateToResult = { finish() }
+                        onNavigateToResult = { finish() },
+                        showUssdConfirmDialog = { showUssdConfirmDialog },
+                        ussdAccessibilityResult = { ussdAccessibilityResult },
+                        ussdAccessibilityDetected = { ussdAccessibilityDetected },
+                        showAccessibilityPrompt = { showAccessibilityPrompt },
+                        onOpenAccessibilitySettings = {
+                            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                            startActivity(intent)
+                        },
+                        onUssdConfirmed = {
+                            val detectedAmount = ussdAccessibilityResult?.amount
+                            val detectedRef = ussdAccessibilityResult?.reference
+                            sessionManager?.onUserConfirmedSuccess(detectedAmount, detectedRef)
+                            showUssdConfirmDialog = false
+                            ussdAccessibilityDetected = false
+                            ussdAccessibilityResult = null
+                            navigateToResult(phoneNumber, amount, detectedAmount ?: amount, detectedRef)
+                        },
+                        onUssdCancelled = {
+                            // Per product requirements: if accessibility detected SUCCESS,
+                            // clicking Cancel still treats the payment as successful.
+                            if (ussdAccessibilityDetected) {
+                                val detectedAmount = ussdAccessibilityResult?.amount
+                                val detectedRef = ussdAccessibilityResult?.reference
+                                sessionManager?.onUserConfirmedSuccess(detectedAmount, detectedRef)
+                                showUssdConfirmDialog = false
+                                ussdAccessibilityDetected = false
+                                ussdAccessibilityResult = null
+                                navigateToResult(phoneNumber, amount, detectedAmount ?: amount, detectedRef)
+                            } else {
+                                sessionManager?.onUserCancelled()
+                                showUssdConfirmDialog = false
+                                ussdAccessibilityDetected = false
+                                ussdAccessibilityResult = null
+                                finish()
+                            }
+                        },
+                        onUssdDismiss = {
+                            showUssdConfirmDialog = false
+                            ussdAccessibilityDetected = false
+                            ussdAccessibilityResult = null
+                            finish()
+                        }
                     )
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Re-check accessibility setting when returning from Android Settings
+        val ussdAccessibilitySetting = settingsRepository.settingsFlow.value.ussdAccessibilityEnabled
+        Log.d(TAG, "onResume: USSD accessibility setting: $ussdAccessibilitySetting")
+        if (ussdAccessibilitySetting && !UssdAccessibilityService.ussdPaymentActive) {
+            val manager = getSystemService(Context.ACCESSIBILITY_SERVICE) as android.view.accessibility.AccessibilityManager
+            val services = manager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+            val accessibilityServiceEnabled = services.any { it.id == "${packageName}/.accessibility.UssdAccessibilityService" }
+            if (accessibilityServiceEnabled) {
+                Log.d(TAG, "onResume: Activating payment detection mode")
+                UssdAccessibilityService.ussdPaymentActive = true
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Deactivate payment detection mode when activity ends
+        UssdAccessibilityService.ussdPaymentActive = false
+        UssdAccessibilityService.ussdCallback = null
+        Log.d(TAG, "USSD payment detection deactivated on activity destroy")
+    }
+
+    private fun navigateToResult(
+        phoneNumber: String,
+        amount: String,
+        confirmedAmount: String,
+        reference: String?
+    ) {
+        val intent = Intent(this, PaymentResultActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("amount", confirmedAmount)
+            putExtra("phone_number", phoneNumber)
+            putExtra("transaction_id", reference ?: "")
+            putExtra("status", "SUCCESS")
+        }
+        startActivity(intent)
+        finish()
     }
 }
 
@@ -91,6 +227,7 @@ private enum class ProgressPhase {
     ENDING
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PaymentProgressScreen(
     phoneNumber: String,
@@ -98,11 +235,30 @@ private fun PaymentProgressScreen(
     sessionManager: PaymentSessionManager?,
     coordinator: CallStateCoordinator?,
     onFinish: () -> Unit,
-    onNavigateToResult: () -> Unit
+    onNavigateToResult: () -> Unit,
+    showUssdConfirmDialog: () -> Boolean,
+    ussdAccessibilityResult: () -> UssdAccessibilityResult?,
+    ussdAccessibilityDetected: () -> Boolean,
+    showAccessibilityPrompt: () -> Boolean,
+    onOpenAccessibilitySettings: () -> Unit,
+    onUssdConfirmed: () -> Unit,
+    onUssdCancelled: () -> Unit,
+    onUssdDismiss: () -> Unit
 ) {
     var phase by remember { mutableStateOf(ProgressPhase.CONNECTING) }
     var statusLine by remember { mutableStateOf("Connecting to UPI service…") }
     var outgoingCallSeen by remember { mutableStateOf(false) }
+
+    // Watch for accessibility-detected payment result
+    var showUssdDialog by remember { mutableStateOf(showUssdConfirmDialog()) }
+    var ussdResult by remember { mutableStateOf(ussdAccessibilityResult()) }
+
+    LaunchedEffect(ussdAccessibilityDetected()) {
+        if (ussdAccessibilityDetected()) {
+            showUssdDialog = true
+            ussdResult = ussdAccessibilityResult()
+        }
+    }
 
     LaunchedEffect(sessionManager) {
         sessionManager?.paymentState?.collect { state ->
@@ -204,7 +360,7 @@ private fun PaymentProgressScreen(
                 verticalArrangement = Arrangement.Center
             ) {
 
-                                val displayPhase = when (phase) {
+                val displayPhase = when (phase) {
                     ProgressPhase.CONNECTING -> PaymentDisplayPhase.CONNECTING
                     ProgressPhase.CALL_ACTIVE -> PaymentDisplayPhase.CALL_ACTIVE
                     ProgressPhase.WAITING_FOR_SMS -> PaymentDisplayPhase.WAITING_FOR_SMS
@@ -288,8 +444,35 @@ private fun PaymentProgressScreen(
                         )
                     }
                 }
+
+                // Show USSD accessibility confirmation dialog when accessibility detected a successful payment
+                if (showUssdDialog) {
+                    val result = ussdResult
+                    if (result != null) {
+                        UssdAccessibilityConfirmDialog(
+                            isVisible = true,
+                            result = result,
+                            onConfirmed = onUssdConfirmed,
+                            onCancelled = onUssdCancelled,
+                            onDismiss = onUssdDismiss
+                        )
+                    }
+                }
+
+                // Show accessibility enablement prompt when service is not enabled
+                if (showAccessibilityPrompt()) {
+                    AlertDialog(
+                        onDismissRequest = { showAccessibilityPrompt() }
+                    ) {
+                        Text(
+                            text = stringResource(R.string.ussd_accessibility_not_enabled),
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
             }
         }
     }
 }
-

@@ -1,6 +1,7 @@
 package com.proximity.app.payment
 
 import android.util.Log
+import com.proximity.app.accessibility.UssdAccessibilityService
 import com.proximity.app.data.Transaction
 import com.proximity.app.data.TransactionSource
 import com.proximity.app.data.TransactionStatus
@@ -30,6 +31,14 @@ interface PaymentTransactionStore {
     ): Int
 
     suspend fun deleteStalePending(now: Long): Int
+
+    suspend fun updateVerifiedPayment(
+        transactionId: String,
+        status: String,
+        amount: String,
+        bankRef: String?,
+        verifiedAt: Long
+    ): Int
 
     suspend fun deletePending(transactionId: String): Int
 }
@@ -70,6 +79,10 @@ class PaymentSessionManager(
         upiId: String? = null,
         source: String = TransactionSource.MANUAL
     ): String {
+        // Activate USSD accessibility payment detection for any new payment session
+        UssdAccessibilityService.ussdPaymentActive = true
+        Log.d(TAG, "Payment session begun - USSD accessibility detection activated")
+
         val initiating: PaymentState.Initiating
         val supersededTxnId: String?
         synchronized(sessionLock) {
@@ -163,10 +176,96 @@ class PaymentSessionManager(
         }
     }
 
+    /**
+     * Handles a USSD accessibility-detected payment result.
+     * Transitions the session to terminal Success using the detected amount/reference.
+     * Caller is responsible for showing the confirmation dialog and invoking this
+     * when the user confirms (or when Cancel is clicked but accessibility detected
+     * SUCCESS — per product requirements, accessibility SUCCESS overrides Cancel).
+     */
+    fun onUssdAccessibilityResult(amount: String?, reference: String?) {
+        var txnId = ""
+        var detectedAmount = ""
+        var verifiedAt = 0L
+
+        synchronized(sessionLock) {
+            val state = _paymentState.value
+            if (!state.isInProgress()) return
+            txnId = state.getTransactionIdValue() ?: return
+            val phone = state.getPhoneNumberValue() ?: ""
+            val sessAmount = state.getAmountValue() ?: ""
+            detectedAmount = amount ?: sessAmount
+            verifiedAt = clock()
+
+            _paymentState.value = PaymentState.Success(
+                transactionId = txnId,
+                phoneNumber = phone,
+                amount = detectedAmount,
+                bankReference = reference,
+                timestamp = verifiedAt
+            )
+            cleanupLocked()
+        }
+
+        scope.launch {
+            pendingInsertJob?.join()
+            store.updateVerifiedPayment(
+                transactionId = txnId,
+                status = TransactionStatus.SUCCESS,
+                amount = detectedAmount,
+                bankRef = reference,
+                verifiedAt = verifiedAt
+            )
+        }
+        Log.d(TAG, "USSD accessibility confirmed payment as SUCCESS: amount=$detectedAmount, ref=$reference")
+    }
+
     fun onUserCancelled() {
         finishSession(TransactionStatus.CANCELLED) { phone, amount, txnId ->
             PaymentState.Cancelled(phone, amount, txnId, "Cancelled by user")
         }
+    }
+
+    /**
+     * Marks the session as user-confirmed success without SMS verification.
+     * Used when accessibility detected SUCCESS and the user clicks "I've completed it"
+     * (or clicks Cancel but accessibility SUCCESS overrides).
+     */
+    fun onUserConfirmedSuccess(amount: String?, reference: String?) {
+        var txnId = ""
+        var detectedAmount = ""
+        var verifiedAt = 0L
+
+        synchronized(sessionLock) {
+            val state = _paymentState.value
+            if (!state.isInProgress()) return
+            txnId = state.getTransactionIdValue() ?: return
+            val phone = state.getPhoneNumberValue() ?: ""
+            val sessAmount = state.getAmountValue() ?: ""
+            detectedAmount = amount ?: sessAmount
+            verifiedAt = clock()
+
+            _paymentState.value = PaymentState.Success(
+                transactionId = txnId,
+                phoneNumber = phone,
+                amount = detectedAmount,
+                bankReference = reference,
+                timestamp = verifiedAt
+            )
+            cleanupLocked()
+        }
+
+        scope.launch {
+            pendingInsertJob?.join()
+            store.updateVerifiedPayment(
+                transactionId = txnId,
+                status = TransactionStatus.SUCCESS,
+                amount = detectedAmount,
+                bankRef = reference,
+                verifiedAt = verifiedAt
+            )
+        }
+        Log.d(TAG, "User confirmed payment success via accessibility: amount=$detectedAmount, ref=$reference")
     }
 
     fun onCallNeverStarted() {

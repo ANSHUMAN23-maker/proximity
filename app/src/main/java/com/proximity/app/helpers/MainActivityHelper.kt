@@ -182,12 +182,16 @@ class MainActivityHelper(
     }
 
     fun navigateToSetup() {
-        val intent = Intent(context, SetupActivity::class.java)
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ context.startActivity(intent) }, 1000)
+        val intent = Intent(context, SetupActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        context.startActivity(intent)
     }
     fun navigateToTestConfiguration() {
-        val intent = Intent(context, TestConfigurationActivity::class.java)
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ context.startActivity(intent) }, 1000)
+        val intent = Intent(context, TestConfigurationActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        context.startActivity(intent)
     }
 
     fun cleanup() {

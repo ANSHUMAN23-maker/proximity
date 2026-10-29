@@ -4,7 +4,6 @@
 package com.proximity.app.ui.components
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.compose.animation.animateColorAsState
@@ -141,35 +140,37 @@ fun FloatingBottomNavBar(
         DampedDragAnimation(
             animationScope = animationScope,
             initialValue = targetIndex.toFloat(),
-            valueRange = 0f..2f,
+            valueRangeStart = 0f,
+            valueRangeEnd = 2f,
             visibilityThreshold = 0.001f,
             initialScale = 1.0f,
             pressedScale = 1.28f, // 28% expansion matching Kyant fluid jelly demo
             onDragStarted = {},
             onDragStopped = {
-                val newIndex = targetValue.roundToInt().coerceIn(0, 2)
+                val currentVal = holder.instance?.value ?: targetIndex.toFloat()
+                val newIndex = currentVal.roundToInt().coerceIn(0, 2)
                 val selectedTab = when (newIndex) {
                     0 -> NavigationTab.HOME
                     1 -> NavigationTab.HISTORY
                     else -> NavigationTab.SETTINGS
                 }
                 if (selectedTab != currentTab) {
-                    animateToValue(newIndex.toFloat())
+                    holder.instance?.animateToValue(newIndex.toFloat())
                     navigateToTab(selectedTab)
                 } else {
-                    animateToValue(newIndex.toFloat())
+                    holder.instance?.animateToValue(newIndex.toFloat())
                 }
                 animationScope.launch {
                     offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
                 }
             },
-            onDrag = { _, dragAmount ->
+            onDrag = { _, dragX ->
                 if (tabWidthPx > 0) {
-                    updateValue(
-                        (targetValue + dragAmount.x / tabWidthPx).coerceIn(0f, 2f)
+                    holder.instance?.updateValue(
+                        (holder.instance?.value ?: (targetIndex.toFloat() + dragX / tabWidthPx)).coerceIn(0f, 2f)
                     )
                     animationScope.launch {
-                        offsetAnimation.snapTo(offsetAnimation.value + dragAmount.x)
+                        offsetAnimation.snapTo(offsetAnimation.value + dragX)
                     }
                 }
             }
