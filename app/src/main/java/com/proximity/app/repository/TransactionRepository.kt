@@ -8,6 +8,7 @@ import com.proximity.app.data.TransactionStatus
 import com.proximity.app.payment.sms.SimpleTransaction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+
 class TransactionRepository private constructor(context: Context) :
     com.proximity.app.payment.PaymentTransactionStore {
 
@@ -138,15 +139,49 @@ class TransactionRepository private constructor(context: Context) :
         status: String,
         amount: String,
         bankRef: String?,
+        recipientName: String?,
         verifiedAt: Long
     ): Int {
-        return transactionDao.updateVerifiedPayment(
+        val updated = transactionDao.updateVerifiedPayment(
             transactionId = transactionId,
             status = status,
             amount = amount,
             bankRef = bankRef,
+            recipientName = recipientName,
             verifiedAt = verifiedAt
         )
+        if (updated == 0) {
+            val existing = transactionDao.getTransactionById(transactionId)
+            if (existing != null) {
+                transactionDao.updateTransaction(
+                    existing.copy(
+                        status = status,
+                        amount = amount,
+                        bankRef = bankRef,
+                        recipientName = recipientName ?: existing.recipientName,
+                        verifiedAt = verifiedAt
+                    )
+                )
+            } else {
+                transactionDao.insertTransaction(
+                    Transaction(
+                        transactionId = transactionId,
+                        amount = amount,
+                        status = status,
+                        bankName = "USSD",
+                        smsExcerpt = "Confirmed via USSD",
+                        timestamp = verifiedAt,
+                        transactionType = "DEBIT",
+                        recipientName = recipientName,
+                        bankRef = bankRef,
+                        verifiedAt = verifiedAt,
+                        source = com.proximity.app.data.TransactionSource.QR
+                    )
+                )
+            }
+            return 1
+        }
+        return updated
     }
 
     override suspend fun deletePending(transactionId: String): Int {

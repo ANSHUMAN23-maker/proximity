@@ -48,6 +48,7 @@ sealed class PaymentState {
         val phoneNumber: String,
         val amount: String,
         val bankReference: String? = null,
+        val recipientName: String? = null,
         val timestamp: Long = System.currentTimeMillis()
     ) : PaymentState()
     data class Failed(

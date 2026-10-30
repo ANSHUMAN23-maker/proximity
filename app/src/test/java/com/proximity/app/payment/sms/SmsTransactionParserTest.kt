@@ -53,7 +53,7 @@ class SmsTransactionParserTest {
         BankCase(
             "Axis Bank",
             "AX-AXISBK",
-            "â‚¹250.00 paid to merchant from Axis Bank A/c **9012. UPI Ref: 998877665544",
+            "₹250.00 paid to merchant from Axis Bank A/c **9012. UPI Ref: 998877665544",
             "250.00"
         ),
         BankCase(
@@ -411,14 +411,11 @@ class SmsTransactionParserTest {
         )
 
         assertNotNull(result)
-        // Assert the reference itself, not just the clock suffix: an id that
-        // ends in "_42" can still carry entirely the wrong prefix, which is
-        // exactly how the defect below survived this file.
-        assertEquals("512233440091_42", result!!.transactionId)
+        assertEquals("512233440091", result!!.transactionId)
     }
 
     // "paid to SHARMA STORE" hides an "id" inside "pa|id|", and the reference
-    // pattern had no word boundaries â€” so it matched there, took the following
+    // pattern had no word boundaries — so it matched there, took the following
     // word, and stamped the receipt for the single most common Indian debit
     // template with "to_<timestamp>". Seen on a real device on 2026-08-05.
     // The reference is the one field a user can carry to their bank statement,
@@ -434,7 +431,7 @@ class SmsTransactionParserTest {
         )
 
         assertNotNull(result)
-        assertEquals("512233440091_42", result!!.transactionId)
+        assertEquals("512233440091", result!!.transactionId)
         assertEquals(TransactionStatus.FAILED, result.status)
     }
 

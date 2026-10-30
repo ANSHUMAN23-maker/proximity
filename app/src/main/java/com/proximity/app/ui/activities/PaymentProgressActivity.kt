@@ -58,13 +58,13 @@ class PaymentProgressActivity : ComponentActivity() {
     }
 
     /** Whether the USSD accessibility confirmation dialog is currently visible. */
-    private var showUssdConfirmDialog = false
+    private var showUssdConfirmDialog by mutableStateOf(false)
     /** The accessibility-detected USSD result, if any. */
-    private var ussdAccessibilityResult: UssdAccessibilityResult? = null
+    private var ussdAccessibilityResult by mutableStateOf<UssdAccessibilityResult?>(null)
     /** Whether accessibility has detected a successful payment and we are awaiting user confirmation. */
-    private var ussdAccessibilityDetected = false
+    private var ussdAccessibilityDetected by mutableStateOf(false)
     /** Whether the accessibility service enablement prompt is visible. */
-    private var showAccessibilityPrompt = false
+    private var showAccessibilityPrompt by mutableStateOf(false)
     /** Settings repository for reading USSD accessibility setting. */
     private lateinit var settingsRepository: com.proximity.app.data.SettingsRepository
 
@@ -89,30 +89,33 @@ class PaymentProgressActivity : ComponentActivity() {
         val ussdAccessibilitySetting = settingsRepository.settingsFlow.value.ussdAccessibilityEnabled
         Log.d(TAG, "USSD accessibility setting: $ussdAccessibilitySetting")
 
-        // Only enable accessibility detection if the app setting is enabled
-        if (ussdAccessibilitySetting) {
-            val manager = getSystemService(Context.ACCESSIBILITY_SERVICE) as android.view.accessibility.AccessibilityManager
-            val services = manager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-            val accessibilityServiceEnabled = services.any { it.id == "${packageName}/.accessibility.UssdAccessibilityService" }
-            if (!accessibilityServiceEnabled) {
-                showAccessibilityPrompt = true
-                Log.d(TAG, "USSD Accessibility Service not enabled in Android Settings - showing prompt")
-            } else {
-                Log.d(TAG, "USSD Accessibility Service enabled - activating payment detection mode")
-                // Activate payment detection mode on the accessibility service
-                UssdAccessibilityService.ussdPaymentActive = true
-                Log.d(TAG, "USSD payment active set to: true")
-            }
+        // Always ensure USSD payment active is enabled for the current payment session
+        UssdAccessibilityService.ussdPaymentActive = true
+
+        // Check if USSD accessibility setting is enabled in app settings and system settings
+        val accessibilityServiceEnabled = UssdAccessibilityService.isAccessibilityEnabled(this)
+        if (ussdAccessibilitySetting && !accessibilityServiceEnabled) {
+            showAccessibilityPrompt = true
+            Log.d(TAG, "USSD Accessibility Service not enabled in Android Settings - showing prompt")
+        } else {
+            Log.d(TAG, "USSD Accessibility Service enabled - activating payment detection mode")
         }
 
         // Wire up USSD accessibility callback for payment detection
         UssdAccessibilityService.ussdCallback = { result ->
             runOnUiThread {
                 if (result.status == UssdStatus.SUCCESS) {
-                    Log.d(TAG, "Accessibility detected USSD payment success: amount=${result.amount}, ref=${result.reference}")
+                    Log.d(TAG, "Accessibility detected USSD payment success: amount=${result.amount}, ref=${result.reference}, recipient=${result.recipientName}")
                     ussdAccessibilityResult = result
                     ussdAccessibilityDetected = true
                     showUssdConfirmDialog = true
+
+                    // Mark payment session as SUCCESS in database & session state immediately so grace period / timeout won't open UserAttestationActivity
+                    sessionManager?.onUssdAccessibilityResult(
+                        amount = result.amount,
+                        reference = result.reference,
+                        recipientName = result.recipientName
+                    )
                 }
             }
         }
@@ -127,7 +130,28 @@ class PaymentProgressActivity : ComponentActivity() {
                         sessionManager = sessionManager,
                         coordinator = coordinator,
                         onFinish = { finish() },
-                        onNavigateToResult = { finish() },
+                        onNavigateToResult = {
+                            val currentState = sessionManager?.paymentState?.value
+                            if (currentState is PaymentState.Success) {
+                                navigateToResult(
+                                    phoneNumber = currentState.phoneNumber.ifBlank { phoneNumber },
+                                    amount = amount,
+                                    confirmedAmount = currentState.amount.ifBlank { amount },
+                                    recipientName = currentState.recipientName,
+                                    reference = currentState.bankReference ?: currentState.transactionId
+                                )
+                            } else if (currentState is PaymentState.NeedsReview) {
+                                navigateToResult(
+                                    phoneNumber = currentState.phoneNumber.ifBlank { phoneNumber },
+                                    amount = amount,
+                                    confirmedAmount = currentState.amount.ifBlank { amount },
+                                    recipientName = null,
+                                    reference = currentState.transactionId
+                                )
+                            } else {
+                                finish()
+                            }
+                        },
                         showUssdConfirmDialog = { showUssdConfirmDialog },
                         ussdAccessibilityResult = { ussdAccessibilityResult },
                         ussdAccessibilityDetected = { ussdAccessibilityDetected },
@@ -141,11 +165,12 @@ class PaymentProgressActivity : ComponentActivity() {
                         onUssdConfirmed = {
                             val detectedAmount = ussdAccessibilityResult?.amount
                             val detectedRef = ussdAccessibilityResult?.reference
-                            sessionManager?.onUserConfirmedSuccess(detectedAmount, detectedRef)
+                            val detectedRecipient = ussdAccessibilityResult?.recipientName
+                            sessionManager?.onUserConfirmedSuccess(detectedAmount, detectedRef, detectedRecipient)
                             showUssdConfirmDialog = false
                             ussdAccessibilityDetected = false
                             ussdAccessibilityResult = null
-                            navigateToResult(phoneNumber, amount, detectedAmount ?: amount, detectedRef)
+                            navigateToResult(phoneNumber, amount, detectedAmount ?: amount, detectedRecipient, detectedRef)
                         },
                         onUssdCancelled = {
                             // Per product requirements: if accessibility detected SUCCESS,
@@ -153,11 +178,12 @@ class PaymentProgressActivity : ComponentActivity() {
                             if (ussdAccessibilityDetected) {
                                 val detectedAmount = ussdAccessibilityResult?.amount
                                 val detectedRef = ussdAccessibilityResult?.reference
-                                sessionManager?.onUserConfirmedSuccess(detectedAmount, detectedRef)
+                                val detectedRecipient = ussdAccessibilityResult?.recipientName
+                                sessionManager?.onUserConfirmedSuccess(detectedAmount, detectedRef, detectedRecipient)
                                 showUssdConfirmDialog = false
                                 ussdAccessibilityDetected = false
                                 ussdAccessibilityResult = null
-                                navigateToResult(phoneNumber, amount, detectedAmount ?: amount, detectedRef)
+                                navigateToResult(phoneNumber, amount, detectedAmount ?: amount, detectedRecipient, detectedRef)
                             } else {
                                 sessionManager?.onUserCancelled()
                                 showUssdConfirmDialog = false
@@ -180,18 +206,8 @@ class PaymentProgressActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Re-check accessibility setting when returning from Android Settings
-        val ussdAccessibilitySetting = settingsRepository.settingsFlow.value.ussdAccessibilityEnabled
-        Log.d(TAG, "onResume: USSD accessibility setting: $ussdAccessibilitySetting")
-        if (ussdAccessibilitySetting && !UssdAccessibilityService.ussdPaymentActive) {
-            val manager = getSystemService(Context.ACCESSIBILITY_SERVICE) as android.view.accessibility.AccessibilityManager
-            val services = manager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-            val accessibilityServiceEnabled = services.any { it.id == "${packageName}/.accessibility.UssdAccessibilityService" }
-            if (accessibilityServiceEnabled) {
-                Log.d(TAG, "onResume: Activating payment detection mode")
-                UssdAccessibilityService.ussdPaymentActive = true
-            }
-        }
+        // Always maintain ussdPaymentActive = true while in PaymentProgressActivity
+        UssdAccessibilityService.ussdPaymentActive = true
     }
 
     override fun onDestroy() {
@@ -206,12 +222,14 @@ class PaymentProgressActivity : ComponentActivity() {
         phoneNumber: String,
         amount: String,
         confirmedAmount: String,
+        recipientName: String?,
         reference: String?
     ) {
         val intent = Intent(this, PaymentResultActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("amount", confirmedAmount)
             putExtra("phone_number", phoneNumber)
+            putExtra("recipient_name", recipientName ?: "")
             putExtra("transaction_id", reference ?: "")
             putExtra("status", "SUCCESS")
         }
@@ -276,7 +294,10 @@ private fun PaymentProgressScreen(
                     phase = ProgressPhase.WAITING_FOR_SMS
                     statusLine = "Request sent. Waiting for bank confirmation…"
                 }
-                is PaymentState.Success, is PaymentState.NeedsReview -> {
+                is PaymentState.Success -> {
+                    onNavigateToResult()
+                }
+                is PaymentState.NeedsReview -> {
                     onNavigateToResult()
                 }
                 is PaymentState.Failed -> {

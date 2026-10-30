@@ -37,6 +37,7 @@ interface PaymentTransactionStore {
         status: String,
         amount: String,
         bankRef: String?,
+        recipientName: String? = null,
         verifiedAt: Long
     ): Int
 
@@ -153,58 +154,34 @@ class PaymentSessionManager(
         }
     }
 
-    fun onUserAttested() {
-        finishSession(com.proximity.app.data.TransactionStatus.USER_ATTESTED) { phone, amount, txnId ->
-            PaymentState.Success(
-                transactionId = txnId,
-                phoneNumber = phone,
-                amount = amount,
-                bankReference = "USER_ATTESTED",
-                timestamp = clock()
-            )
-        }
-    }
-
-    fun onUserDeclined() {
-        finishSession(com.proximity.app.data.TransactionStatus.FAILED) { phone, amount, txnId ->
-            PaymentState.Failed(
-                error = "User reported payment failed",
-                phoneNumber = phone,
-                amount = amount,
-                transactionId = txnId
-            )
-        }
-    }
-
     /**
      * Handles a USSD accessibility-detected payment result.
-     * Transitions the session to terminal Success using the detected amount/reference.
-     * Caller is responsible for showing the confirmation dialog and invoking this
-     * when the user confirms (or when Cancel is clicked but accessibility detected
-     * SUCCESS — per product requirements, accessibility SUCCESS overrides Cancel).
+     * Transitions the session to terminal Success using the detected amount/reference/recipient.
      */
-    fun onUssdAccessibilityResult(amount: String?, reference: String?) {
+    fun onUssdAccessibilityResult(amount: String?, reference: String?, recipientName: String? = null) {
         var txnId = ""
         var detectedAmount = ""
         var verifiedAt = 0L
 
         synchronized(sessionLock) {
             val state = _paymentState.value
-            if (!state.isInProgress()) return
             txnId = state.getTransactionIdValue() ?: return
             val phone = state.getPhoneNumberValue() ?: ""
             val sessAmount = state.getAmountValue() ?: ""
-            detectedAmount = amount ?: sessAmount
+            detectedAmount = amount?.takeIf { it.isNotBlank() } ?: sessAmount
             verifiedAt = clock()
 
-            _paymentState.value = PaymentState.Success(
-                transactionId = txnId,
-                phoneNumber = phone,
-                amount = detectedAmount,
-                bankReference = reference,
-                timestamp = verifiedAt
-            )
-            cleanupLocked()
+            if (state !is PaymentState.Success) {
+                _paymentState.value = PaymentState.Success(
+                    transactionId = txnId,
+                    phoneNumber = phone,
+                    amount = detectedAmount,
+                    bankReference = reference,
+                    recipientName = recipientName,
+                    timestamp = verifiedAt
+                )
+                cleanupLocked()
+            }
         }
 
         scope.launch {
@@ -214,10 +191,11 @@ class PaymentSessionManager(
                 status = TransactionStatus.SUCCESS,
                 amount = detectedAmount,
                 bankRef = reference,
+                recipientName = recipientName,
                 verifiedAt = verifiedAt
             )
         }
-        Log.d(TAG, "USSD accessibility confirmed payment as SUCCESS: amount=$detectedAmount, ref=$reference")
+        Log.d(TAG, "USSD accessibility confirmed payment as SUCCESS: amount=$detectedAmount, ref=$reference, recipient=$recipientName")
     }
 
     fun onUserCancelled() {
@@ -228,10 +206,8 @@ class PaymentSessionManager(
 
     /**
      * Marks the session as user-confirmed success without SMS verification.
-     * Used when accessibility detected SUCCESS and the user clicks "I've completed it"
-     * (or clicks Cancel but accessibility SUCCESS overrides).
      */
-    fun onUserConfirmedSuccess(amount: String?, reference: String?) {
+    fun onUserConfirmedSuccess(amount: String?, reference: String?, recipientName: String? = null) {
         var txnId = ""
         var detectedAmount = ""
         var verifiedAt = 0L
@@ -250,6 +226,7 @@ class PaymentSessionManager(
                 phoneNumber = phone,
                 amount = detectedAmount,
                 bankReference = reference,
+                recipientName = recipientName,
                 timestamp = verifiedAt
             )
             cleanupLocked()
@@ -262,10 +239,11 @@ class PaymentSessionManager(
                 status = TransactionStatus.SUCCESS,
                 amount = detectedAmount,
                 bankRef = reference,
+                recipientName = recipientName,
                 verifiedAt = verifiedAt
             )
         }
-        Log.d(TAG, "User confirmed payment success via accessibility: amount=$detectedAmount, ref=$reference")
+        Log.d(TAG, "User confirmed payment success via accessibility: amount=$detectedAmount, ref=$reference, recipient=$recipientName")
     }
 
     fun onCallNeverStarted() {

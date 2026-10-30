@@ -86,7 +86,7 @@ fun CurrencyText(
     color: Color = MaterialTheme.colorScheme.onSurface,
     modifier: Modifier = Modifier
 ) {
-    val formattedAmount = CurrencyFormat.inr(amount)
+    val formattedAmount = CurrencyFormat.inr(amount.ifBlank { "0.00" })
     val annotatedString = buildAnnotatedString {
         withStyle(
             SpanStyle(

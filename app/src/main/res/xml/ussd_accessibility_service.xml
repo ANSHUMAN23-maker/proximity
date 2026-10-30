@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowStateChanged|typeViewFocused|typeViewTextChanged"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeViewFocused|typeViewTextChanged|typeWindowContentChanged"
     android:accessibilityFeedbackType="feedbackSpoken|feedbackHaptic|feedbackGeneric"
-    android:accessibilityFlags="flagReportViewIds"
+    android:accessibilityFlags="flagReportViewIds|flagIncludeNotImportantViews|flagRetrieveInteractiveWindows"
     android:canRetrieveWindowContent="true"
     android:description="@string/ussd_accessibility_service_description"
     android:notificationTimeout="100" />

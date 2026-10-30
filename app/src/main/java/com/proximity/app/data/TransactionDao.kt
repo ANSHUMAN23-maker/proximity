@@ -69,7 +69,7 @@ interface TransactionDao {
     @Query(
         "UPDATE transactions SET status = :status, bankRef = :bankRef, bankName = :bankName, " +
             "smsExcerpt = :smsExcerpt, upiId = COALESCE(:upiId, upiId), " +
-            "recipientName = COALESCE(:recipientName, recipientName), " +
+            "recipientName = CASE WHEN :recipientName IS NOT NULL AND :recipientName != '' THEN :recipientName ELSE recipientName END, " +
             "amount = CASE WHEN amount = '' THEN :amount ELSE amount END, " +
             "verifiedAt = :verifiedAt " +
             "WHERE transactionId = :transactionId AND status = :expectedStatus"
@@ -90,6 +90,7 @@ interface TransactionDao {
 
     @Query(
         "UPDATE transactions SET status = :status, amount = :amount, bankRef = :bankRef, " +
+            "recipientName = CASE WHEN :recipientName IS NOT NULL AND :recipientName != '' THEN :recipientName ELSE recipientName END, " +
             "verifiedAt = :verifiedAt WHERE transactionId = :transactionId AND status = 'PENDING'"
     )
     suspend fun updateVerifiedPayment(
@@ -97,6 +98,7 @@ interface TransactionDao {
         status: String,
         amount: String,
         bankRef: String?,
+        recipientName: String? = null,
         verifiedAt: Long
     ): Int
 

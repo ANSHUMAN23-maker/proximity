@@ -457,10 +457,11 @@ private fun TransactionHistoryItem(
     transaction: Transaction,
     onClick: () -> Unit
 ) {
-    val displayName = transaction.recipientName?.takeIf { it.isNotEmpty() }
-        ?: transaction.phoneNumber?.takeIf { it.isNotEmpty() }
+    val displayName = transaction.recipientName?.takeIf { it.isNotBlank() }
+        ?: transaction.phoneNumber?.takeIf { it.isNotBlank() }
+        ?: transaction.upiId?.takeIf { it.isNotBlank() }
         ?: "Unknown"
-    val initial = displayName.first().uppercaseChar()
+    val initial = displayName.firstOrNull()?.uppercaseChar() ?: 'U'
 
     Row(
         modifier = Modifier

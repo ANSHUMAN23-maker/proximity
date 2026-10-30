@@ -45,6 +45,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.proximity.app.BuildConfig
 import com.proximity.app.ProximityApplication
 import com.proximity.app.R
+import com.proximity.app.accessibility.UssdAccessibilityService
 import com.proximity.app.ui.components.SimOperatorLogoBadge
 import com.proximity.app.ui.components.pressScale
 import com.proximity.app.SetupActivity
@@ -453,9 +454,7 @@ fun SettingsScreen(
                         GroupDivider()
 
                         // USSD Accessibility Service Toggle
-                        val manager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as android.view.accessibility.AccessibilityManager
-                        val services = manager.getEnabledAccessibilityServiceList(android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-                        val accessibilityEnabled = services.any { it.id == "${context.packageName}/.accessibility.UssdAccessibilityService" }
+                        val accessibilityEnabled = UssdAccessibilityService.isAccessibilityEnabled(context)
                         ToggleRow(
                             icon = Icons.Default.Accessibility,
                             title = stringResource(R.string.settings_ussd_accessibility_title),

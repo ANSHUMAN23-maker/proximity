@@ -68,14 +68,15 @@ fun PaymentResultScreen(intent: Intent, onDone: () -> Unit) {
     val accent = LocalProximityAccentTheme.current
 
     val amountStr = intent.getStringExtra("amount") ?: "0"
-    val amount = amountStr.toDoubleOrNull() ?: 0.0
+    val amount = amountStr.replace(",", "").toDoubleOrNull() ?: 0.0
     val phoneNumber = intent.getStringExtra("phone_number") ?: ""
     val recipientName = intent.getStringExtra("recipient_name") ?: ""
     val status = intent.getStringExtra("status") ?: "SUCCESS"
     val transactionId = intent.getStringExtra("transaction_id") ?: ""
     val errorMessage = intent.getStringExtra("error_message") ?: ""
 
-    val isSuccess = status.equals("SUCCESS", ignoreCase = true) || status.equals("NEEDS_REVIEW", ignoreCase = true) || status.isBlank()
+    val isPending = status.equals("PENDING", ignoreCase = true) || status.equals("UNVERIFIED", ignoreCase = true)
+    val isSuccess = !isPending && (status.equals("SUCCESS", ignoreCase = true) || status.equals("NEEDS_REVIEW", ignoreCase = true) || status.isBlank())
 
     var step1Visible by remember { mutableStateOf(false) }
     var step2Visible by remember { mutableStateOf(false) }
@@ -128,13 +129,21 @@ fun PaymentResultScreen(intent: Intent, onDone: () -> Unit) {
                     enter = scaleIn(initialScale = 0.4f) + fadeIn()
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        if (isSuccess) {
-                            SmoothCheckmarkAnimation(
-                                circleColor = accent.primary,
-                                checkmarkColor = Color.White
-                            )
-                        } else {
-                            SmoothErrorAnimation()
+                        when {
+                            isSuccess -> {
+                                SmoothCheckmarkAnimation(
+                                    circleColor = accent.primary,
+                                    checkmarkColor = Color.White
+                                )
+                            }
+                            isPending -> {
+                                SmoothPendingAnimation(
+                                    color = StatusAmber
+                                )
+                            }
+                            else -> {
+                                SmoothErrorAnimation()
+                            }
                         }
                     }
                 }
@@ -147,18 +156,28 @@ fun PaymentResultScreen(intent: Intent, onDone: () -> Unit) {
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
-                            text = if (isSuccess) "Payment Successful" else "Payment Failed",
+                            text = when {
+                                isSuccess -> "Payment Successful"
+                                isPending -> "Verification Pending"
+                                else -> "Payment Failed"
+                            },
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
                         )
 
-                        if (!isSuccess && errorMessage.isNotEmpty()) {
+                        val subtitle = when {
+                            isPending -> if (errorMessage.isNotBlank()) errorMessage else "Awaiting bank confirmation SMS. Check Transaction History for updates."
+                            !isSuccess && errorMessage.isNotEmpty() -> errorMessage
+                            else -> null
+                        }
+
+                        if (subtitle != null) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = errorMessage,
+                                text = subtitle,
                                 fontSize = 14.sp,
-                                color = ProximityStatusError,
+                                color = if (isPending) MaterialTheme.colorScheme.onSurfaceVariant else ProximityStatusError,
                                 textAlign = TextAlign.Center
                             )
                         }
@@ -176,7 +195,11 @@ fun PaymentResultScreen(intent: Intent, onDone: () -> Unit) {
                             amount = animatedAmount.toDouble(),
                             fontSize = 40.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isSuccess) accent.primary else ProximityStatusError
+                            color = when {
+                                isSuccess -> accent.primary
+                                isPending -> StatusAmber
+                                else -> ProximityStatusError
+                            }
                         )
                     }
                 }
@@ -198,14 +221,22 @@ fun PaymentResultScreen(intent: Intent, onDone: () -> Unit) {
                             modifier = Modifier.padding(20.dp),
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            // Paid To (Number / Recipient)
-                            if (phoneNumber.isNotEmpty() || recipientName.isNotEmpty()) {
+                            // Paid To (Recipient Name)
+                            if (recipientName.isNotBlank()) {
                                 DetailReceiptRow(
                                     label = "Paid To",
-                                    value = if (recipientName.isNotBlank()) {
-                                        "$recipientName (+91 ${formatPhoneDisplay(phoneNumber)})"
-                                    } else {
-                                        "+91 ${formatPhoneDisplay(phoneNumber)}"
+                                    value = recipientName
+                                )
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                            }
+
+                            // UPI ID or Phone Number on separate row
+                            if (phoneNumber.isNotBlank()) {
+                                val isUpiId = phoneNumber.contains("@")
+                                DetailReceiptRow(
+                                    label = if (isUpiId) "UPI ID" else "Phone Number",
+                                    value = if (isUpiId) phoneNumber else {
+                                        if (phoneNumber.startsWith("+91")) phoneNumber else "+91 ${formatPhoneDisplay(phoneNumber)}"
                                     }
                                 )
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
@@ -222,6 +253,14 @@ fun PaymentResultScreen(intent: Intent, onDone: () -> Unit) {
                                     )
                                 }
                             )
+
+                            if (isPending) {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                                DetailReceiptRow(
+                                    label = "Status",
+                                    value = "Pending Confirmation"
+                                )
+                            }
 
                             if (transactionId.isNotEmpty()) {
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
@@ -320,7 +359,7 @@ private fun DetailReceiptRow(
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.End,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
         }

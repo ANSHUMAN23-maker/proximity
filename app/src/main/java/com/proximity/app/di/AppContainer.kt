@@ -81,12 +81,14 @@ private class LazyTransactionStore(private val appContext: Context) : PaymentTra
         status: String,
         amount: String,
         bankRef: String?,
+        recipientName: String?,
         verifiedAt: Long
     ): Int = repo().updateVerifiedPayment(
         transactionId = transactionId,
         status = status,
         amount = amount,
         bankRef = bankRef,
+        recipientName = recipientName,
         verifiedAt = verifiedAt
     )
 

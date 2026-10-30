@@ -127,6 +127,25 @@ class PaymentSessionManagerTest {
             return stale.size
         }
 
+        override suspend fun updateVerifiedPayment(
+            transactionId: String,
+            status: String,
+            amount: String,
+            bankRef: String?,
+            recipientName: String?,
+            verifiedAt: Long
+        ): Int {
+            val row = rows[transactionId]?.takeIf { it.status == TransactionStatus.PENDING } ?: return 0
+            rows[transactionId] = row.copy(
+                status = status,
+                amount = amount,
+                bankRef = bankRef,
+                recipientName = recipientName ?: row.recipientName,
+                verifiedAt = verifiedAt
+            )
+            return 1
+        }
+
         override suspend fun deletePending(transactionId: String): Int {
             deletePendingAttempts.incrementAndGet()
             val pending = rows[transactionId]?.status == TransactionStatus.PENDING
@@ -835,5 +854,40 @@ class PaymentSessionManagerTest {
                 scope.cancel()
             }
         }
+    }
+    @Test
+    fun `ussd accessibility result confirms payment immediately and updates store`() = runTest {
+        val store = FakeStore()
+        val source = FakeCallStateSource()
+        val manager = PaymentSessionManager(
+            store = store,
+            coordinator = source,
+            scope = this,
+            clock = { 1_000L }
+        )
+
+        val txnId = manager.begin("9876543210", "150", "payee@upi", TransactionSource.QR)!!
+        runCurrent()
+
+        manager.onUssdAccessibilityResult(
+            amount = "150",
+            reference = "UPI123456789",
+            recipientName = "Merchant Shop"
+        )
+        runCurrent()
+
+        val state = manager.paymentState.value
+        assertTrue(state is PaymentState.Success)
+        val success = state as PaymentState.Success
+        assertEquals("150", success.amount)
+        assertEquals("UPI123456789", success.bankReference)
+        assertEquals("Merchant Shop", success.recipientName)
+        assertEquals(txnId, success.transactionId)
+
+        val stored = store.rows[txnId]
+        assertNotNull(stored)
+        assertEquals(TransactionStatus.SUCCESS, stored!!.status)
+        assertEquals("UPI123456789", stored.bankRef)
+        assertEquals("Merchant Shop", stored.recipientName)
     }
 }

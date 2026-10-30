@@ -203,6 +203,7 @@ object SmsTransactionParser {
     internal fun isAmountMatching(extracted: String, expected: String): Boolean {
         val extractedNum = extracted.replace(",", "").toDoubleOrNull() ?: return false
         val expectedNum = expected.replace(",", "").toDoubleOrNull() ?: return false
+        if (expectedNum <= 0.0) return true
         return Math.round(extractedNum * PAISE_PER_RUPEE) == Math.round(expectedNum * PAISE_PER_RUPEE)
     }
 

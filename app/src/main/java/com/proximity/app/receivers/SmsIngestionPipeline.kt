@@ -47,12 +47,25 @@ object SmsIngestionPipeline {
             // Dismiss the USSD overlay (QR flow) and notify listening screens.
             LocalBroadcastManager.getInstance(context)
                 .sendBroadcast(Intent("DISMISS_OVERLAY"))
-            LocalBroadcastManager.getInstance(context)
-                .sendBroadcast(Intent("com.proximity.app.SMS_RECEIVED"))
+
+            val resolvedTxnId = recordTxnId ?: transaction.transactionId
+            val smsBroadcastIntent = Intent("com.proximity.app.SMS_RECEIVED").apply {
+                putExtra("transaction_id", resolvedTxnId)
+                putExtra("amount", transaction.amount)
+                putExtra("status", transaction.status)
+                putExtra("bank_name", transaction.bankName)
+                putExtra("message", transaction.smsExcerpt)
+                putExtra("timestamp", transaction.timestamp)
+                putExtra("upi_id", transaction.upiId)
+                putExtra("transaction_type", transaction.transactionType)
+                putExtra("recipient_name", transaction.recipientName)
+                putExtra("phone_number", transaction.phoneNumber)
+            }
+            LocalBroadcastManager.getInstance(context).sendBroadcast(smsBroadcastIntent)
 
             val successIntent = Intent(context, PaymentResultActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra("transaction_id", recordTxnId ?: transaction.transactionId)
+                putExtra("transaction_id", resolvedTxnId)
                 putExtra("amount", transaction.amount)
                 putExtra("status", transaction.status)
                 putExtra("bank_name", transaction.bankName)
@@ -64,7 +77,11 @@ object SmsIngestionPipeline {
                 putExtra("phone_number", transaction.phoneNumber)
             }
             PaymentResultNotifier.notifyResult(context, successIntent)
-            context.startActivity(successIntent)
+            try {
+                context.startActivity(successIntent)
+            } catch (e: Exception) {
+                Log.w(TAG, "Direct activity launch from background receiver failed: ${e.message}")
+            }
         }
     }
 

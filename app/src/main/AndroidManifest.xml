@@ -91,14 +91,6 @@
             android:theme="@style/Theme.Proximity"
             android:screenOrientation="portrait" />
 
-        <!-- User Attestation Activity -->
-        <activity
-            android:name=".ui.activities.UserAttestationActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Proximity"
-            android:screenOrientation="portrait"
-            android:launchMode="singleTask" />
-
         <!-- Payment Success Activity -->
         <activity
             android:name=".ui.activities.PaymentResultActivity"
@@ -140,6 +132,7 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".MainActivity" />
         </activity>
+
 
         <!-- ConnectionService that intercepts UPI123 outgoing calls so the system
              dialer never appears. Required for TelecomManager.placeCall(). -->
@@ -183,8 +176,7 @@
 
         <receiver
             android:name=".receivers.SimpleSMSReceiver"
-            android:exported="true"
-            android:permission="android.permission.BROADCAST_SMS">
+            android:exported="true">
             <intent-filter android:priority="999">
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>

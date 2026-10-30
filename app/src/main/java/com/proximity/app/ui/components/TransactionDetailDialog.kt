@@ -108,8 +108,9 @@ fun TransactionDetailDialog(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // Large amount
+                val displayAmount = if (transaction.amount.isBlank()) "0.00" else CurrencyFormat.inr(transaction.amount)
                 Text(
-                    text = stringResource(R.string.amount_rupees, CurrencyFormat.inr(transaction.amount)),
+                    text = stringResource(R.string.amount_rupees, displayAmount),
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
                     color = accent.primary,
@@ -176,17 +177,19 @@ fun TransactionDetailDialog(
                             DetailDivider()
                         }
 
-                        DetailRow(
-                            label = stringResource(R.string.label_bank),
-                            value = transaction.bankName,
-                            onCopy = {
-                                clipboardManager.setText(AnnotatedString(transaction.bankName))
-                                Toast.makeText(context, "Bank copied", Toast.LENGTH_SHORT).show()
-                            }
-                        )
+                        if (!transaction.bankName.isNullOrBlank()) {
+                            DetailRow(
+                                label = stringResource(R.string.label_bank),
+                                value = transaction.bankName,
+                                onCopy = {
+                                    clipboardManager.setText(AnnotatedString(transaction.bankName))
+                                    Toast.makeText(context, "Bank copied", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                            DetailDivider()
+                        }
 
                         if (!transaction.recipientName.isNullOrEmpty()) {
-                            DetailDivider()
                             DetailRow(
                                 label = stringResource(R.string.detail_label_recipient),
                                 value = transaction.recipientName,
@@ -195,10 +198,10 @@ fun TransactionDetailDialog(
                                     Toast.makeText(context, "Recipient copied", Toast.LENGTH_SHORT).show()
                                 }
                             )
+                            DetailDivider()
                         }
 
                         if (!transaction.phoneNumber.isNullOrEmpty()) {
-                            DetailDivider()
                             DetailRow(
                                 label = stringResource(R.string.detail_label_phone_number),
                                 value = transaction.phoneNumber,
@@ -207,10 +210,10 @@ fun TransactionDetailDialog(
                                     Toast.makeText(context, "Phone number copied", Toast.LENGTH_SHORT).show()
                                 }
                             )
+                            DetailDivider()
                         }
 
                         if (!transaction.upiId.isNullOrEmpty()) {
-                            DetailDivider()
                             DetailRow(
                                 label = stringResource(R.string.label_upi_id),
                                 value = transaction.upiId,
@@ -219,9 +222,8 @@ fun TransactionDetailDialog(
                                     Toast.makeText(context, "UPI ID copied", Toast.LENGTH_SHORT).show()
                                 }
                             )
+                            DetailDivider()
                         }
-
-                        DetailDivider()
 
                         DetailRow(
                             label = stringResource(R.string.label_date_time),

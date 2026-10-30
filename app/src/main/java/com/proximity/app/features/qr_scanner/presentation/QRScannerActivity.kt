@@ -80,8 +80,12 @@ import com.proximity.app.helpers.SetupHelper
 import com.proximity.app.helpers.TransactionDetector
 import com.proximity.app.managers.PermissionManager
 import com.proximity.app.payment.PaymentSessionManager
+import com.proximity.app.states.PaymentState
 import com.proximity.app.ui.theme.*
 import com.proximity.app.ui.activities.PaymentResultActivity
+import android.provider.Settings
+import com.proximity.app.accessibility.UssdAccessibilityResult
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -103,7 +107,10 @@ data class QRScannerState(
     val isFlashOn: Boolean = false,
     val scanError: String? = null,
     val instructionsExpanded: Boolean = false,
-    val showTerminateButtons: Boolean = false
+    val showTerminateButtons: Boolean = false,
+    val showA11yPrompt: Boolean = false,
+    val isAwaitingConfirmation: Boolean = false,
+    val countdownSeconds: Int = 25
 )
 
 class QRScannerActivity : ComponentActivity() {
@@ -137,6 +144,11 @@ class QRScannerActivity : ComponentActivity() {
     @Volatile private var finishedByWaitingScreenTimeout = false
     @Volatile private var finishedByManualCompletion = false
     private var didCopyVpa = false
+    private var currentUpiData: UPIData? = null
+    private var pendingUpiData: UPIData? = null
+    private var countdownJob: Job? = null
+    private var currentSessionTxnId: String? = null
+    @Volatile private var isActivityResumed = false
 
     lateinit var viewFinder: PreviewView
 
@@ -182,7 +194,7 @@ class QRScannerActivity : ComponentActivity() {
     private val smsReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "com.proximity.app.SMS_RECEIVED") {
-                Log.d("QRScanner", "SMS received - transaction successful!")
+                Log.d("QRScanner", "SMS received - transaction confirmed!")
                 if (isUSSDProcessActive) {
                     handleSMSReceived(intent)
                 }
@@ -230,10 +242,10 @@ class QRScannerActivity : ComponentActivity() {
                         },
                         onTerminateClick = { terminateUSSDProcess() },
                         onUssdCompletedClick = {
-                            val sessionManager = ProximityApplication.from(this@QRScannerActivity)?.paymentSessionManager
-                            sessionManager?.onUssdCallEndedManually()
-                            finishedByManualCompletion = true
-                            finish()
+                            handleUssdCompleted()
+                        },
+                        onAwaitingDoneClick = {
+                            handleAwaitingEarlyExit()
                         },
                         onFlashClick = {
                             val newFlash = !state.isFlashOn
@@ -244,6 +256,26 @@ class QRScannerActivity : ComponentActivity() {
                             galleryPickerLauncher.launch(
                                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                             )
+                        },
+                        onA11yEnableClick = {
+                            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                            startActivity(intent)
+                        },
+                        onA11yContinueClick = {
+                            val pending = pendingUpiData
+                            pendingUpiData = null
+                            _uiState.update { it.copy(showA11yPrompt = false) }
+                            if (pending != null) {
+                                proceedWithPayment(pending)
+                            }
+                        },
+                        onA11yDismissClick = {
+                            pendingUpiData = null
+                            isProcessingQRCode = false
+                            _uiState.update { it.copy(showA11yPrompt = false, isProcessing = false) }
+                            imageAnalyzer?.setAnalyzer(cameraExecutor, QRCodeAnalyzer { qrCode -> processQRCode(qrCode) })
                         }
                     )
                 }
@@ -319,6 +351,12 @@ class QRScannerActivity : ComponentActivity() {
     }
 
     private fun initiateUSSDPayment(upiData: UPIData) {
+        val a11yEnabled = UssdAccessibilityService.isAccessibilityEnabled(this)
+        if (!a11yEnabled) {
+            pendingUpiData = upiData
+            _uiState.update { it.copy(showA11yPrompt = true) }
+            return
+        }
         proceedWithPayment(upiData)
     }
 
@@ -348,37 +386,193 @@ class QRScannerActivity : ComponentActivity() {
     private fun beginQrPaymentSession(upiData: UPIData): Boolean {
         val sessionManager = ProximityApplication.from(this)?.paymentSessionManager ?: return false
 
+        currentUpiData = upiData
+        UssdAccessibilityService.reset()
+        UssdAccessibilityService.ussdPaymentActive = true
+
         val sessionTxnId = sessionManager.begin("", upiData.amount ?: "", upiData.vpa, TransactionSource.QR)
+        currentSessionTxnId = sessionTxnId
 
         // Wire up USSD accessibility callback for QR payment flow
         UssdAccessibilityService.ussdCallback = { result ->
             runOnUiThread {
                 if (result.status == UssdStatus.SUCCESS) {
-                    Log.d(TAG, "Accessibility detected USSD payment success: amount=${result.amount}, ref=${result.reference}")
+                    Log.d(TAG, "Accessibility detected USSD payment success: amount=${result.amount}, ref=${result.reference}, recipient=${result.recipientName}")
 
-                    sessionManager.onUserConfirmedSuccess(result.amount, result.reference)
+                    sessionManager.onUssdAccessibilityResult(
+                        amount = result.amount ?: upiData.amount,
+                        reference = result.reference,
+                        recipientName = result.recipientName ?: upiData.payeeName
+                    )
 
-                    val intent = Intent(this@QRScannerActivity, PaymentResultActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                        putExtra("amount", result.amount ?: upiData.amount ?: "0")
-                        putExtra("phone_number", upiData.vpa ?: "")
-                        putExtra("transaction_id", result.reference ?: "")
-                        putExtra("status", "SUCCESS")
+                    // If activity is in foreground or awaiting confirmation, navigate immediately
+                    if (isActivityResumed && isActivityAlive()) {
+                        completeSuccessFromDetected(result)
+                    } else {
+                        updateBlackScreenStatus(R.string.ussd_accessibility_payment_found_body)
                     }
-                    startActivity(intent)
-                    finish()
                 }
             }
         }
 
         return try {
-            TransactionDetector.getInstance(this).startOperation("QR_SCAN", upiData.amount, sessionTxnId)
+            TransactionDetector.getInstance(this).startOperation(
+                operationType = "QR_SCAN",
+                expectedAmount = upiData.amount,
+                phoneNumber = upiData.vpa,
+                sessionTxnId = sessionTxnId
+            )
             true
         } catch (e: IllegalStateException) {
             sessionManager.onDialFailed("Could not start SMS monitoring")
             showError(getString(R.string.error_payment_init_failed))
             false
         }
+    }
+
+    private fun completeSuccessFromDetected(detected: UssdAccessibilityResult) {
+        countdownJob?.cancel()
+        val upi = currentUpiData
+        val sessionManager = ProximityApplication.from(this)?.paymentSessionManager
+        val amount = detected.amount ?: upi?.amount ?: "0"
+        val ref = detected.reference ?: currentSessionTxnId ?: ""
+        val recipient = detected.recipientName ?: upi?.payeeName ?: ""
+        val phoneOrVpa = upi?.vpa ?: ""
+
+        sessionManager?.onUssdAccessibilityResult(
+            amount = amount,
+            reference = ref,
+            recipientName = recipient
+        )
+
+        launchPaymentResultScreen(
+            amount = amount,
+            phoneNumber = phoneOrVpa,
+            recipientName = recipient,
+            transactionId = ref,
+            bankName = "USSD *99#",
+            status = "SUCCESS"
+        )
+    }
+
+    private fun handleUssdCompleted() {
+        val detected = UssdAccessibilityService.latestResult
+        val upi = currentUpiData
+        val sessionManager = ProximityApplication.from(this)?.paymentSessionManager
+
+        if (detected != null && detected.status == UssdStatus.SUCCESS) {
+            Log.d(TAG, "User completed USSD: detected result found (${detected.amount}, ${detected.reference}, ${detected.recipientName})")
+            completeSuccessFromDetected(detected)
+            return
+        }
+
+        val sessionState = sessionManager?.paymentState?.value
+        if (sessionState is PaymentState.Success) {
+            Log.d(TAG, "User completed USSD: session already confirmed")
+            countdownJob?.cancel()
+            launchPaymentResultScreen(
+                amount = sessionState.amount,
+                phoneNumber = sessionState.phoneNumber.ifBlank { upi?.vpa ?: "" },
+                recipientName = sessionState.recipientName ?: upi?.payeeName ?: "",
+                transactionId = sessionState.bankReference ?: sessionState.transactionId,
+                bankName = if (detected != null) "USSD *99#" else "Bank SMS",
+                status = "SUCCESS"
+            )
+            return
+        }
+
+        Log.d(TAG, "User completed USSD: starting Option A waiting confirmation countdown...")
+        sessionManager?.onUssdCallEndedManually()
+        startAwaitingConfirmationCountdown()
+    }
+
+    private fun startAwaitingConfirmationCountdown() {
+        val sessionManager = ProximityApplication.from(this)?.paymentSessionManager
+        val upi = currentUpiData
+        val txnId = currentSessionTxnId ?: ""
+
+        _uiState.update {
+            it.copy(
+                isAwaitingConfirmation = true,
+                countdownSeconds = 25,
+                showTerminateButtons = false
+            )
+        }
+
+        countdownJob?.cancel()
+        countdownJob = lifecycleScope.launch {
+            for (sec in 25 downTo 1) {
+                val detected = UssdAccessibilityService.latestResult
+                if (detected != null && detected.status == UssdStatus.SUCCESS) {
+                    completeSuccessFromDetected(detected)
+                    return@launch
+                }
+
+                val sessionState = sessionManager?.paymentState?.value
+                if (sessionState is PaymentState.Success) {
+                    launchPaymentResultScreen(
+                        amount = sessionState.amount,
+                        phoneNumber = sessionState.phoneNumber.ifBlank { upi?.vpa ?: "" },
+                        recipientName = sessionState.recipientName ?: upi?.payeeName ?: "",
+                        transactionId = sessionState.bankReference ?: sessionState.transactionId,
+                        bankName = "Bank SMS",
+                        status = "SUCCESS"
+                    )
+                    return@launch
+                }
+
+                _uiState.update { it.copy(countdownSeconds = sec) }
+                delay(1000)
+            }
+
+            // Final check on timer expiration
+            val finalDetected = UssdAccessibilityService.latestResult
+            if (finalDetected != null && finalDetected.status == UssdStatus.SUCCESS) {
+                completeSuccessFromDetected(finalDetected)
+                return@launch
+            }
+
+            val finalSessionState = sessionManager?.paymentState?.value
+            if (finalSessionState is PaymentState.Success) {
+                launchPaymentResultScreen(
+                    amount = finalSessionState.amount,
+                    phoneNumber = finalSessionState.phoneNumber.ifBlank { upi?.vpa ?: "" },
+                    recipientName = finalSessionState.recipientName ?: upi?.payeeName ?: "",
+                    transactionId = finalSessionState.bankReference ?: finalSessionState.transactionId,
+                    bankName = "Bank SMS",
+                    status = "SUCCESS"
+                )
+                return@launch
+            }
+
+            // Option A: Timer expired without SMS or USSD success - transition to PENDING / UNVERIFIED without self-attestation
+            Log.d(TAG, "Option A countdown expired without confirmation. Navigating with PENDING status.")
+            launchPaymentResultScreen(
+                amount = upi?.amount ?: "0",
+                phoneNumber = upi?.vpa ?: "",
+                recipientName = upi?.payeeName ?: "",
+                transactionId = txnId,
+                bankName = "Pending Confirmation",
+                status = "PENDING",
+                errorMessage = "Awaiting bank confirmation SMS. Check Transaction History for updates."
+            )
+        }
+    }
+
+    private fun handleAwaitingEarlyExit() {
+        countdownJob?.cancel()
+        val upi = currentUpiData
+        val txnId = currentSessionTxnId ?: ""
+        Log.d(TAG, "User exited waiting screen early. Navigating with PENDING status.")
+        launchPaymentResultScreen(
+            amount = upi?.amount ?: "0",
+            phoneNumber = upi?.vpa ?: "",
+            recipientName = upi?.payeeName ?: "",
+            transactionId = txnId,
+            bankName = "Pending Confirmation",
+            status = "PENDING",
+            errorMessage = "Awaiting bank confirmation SMS. Check Transaction History for updates."
+        )
     }
 
     private fun copyVpaToClipboard(vpa: String) {
@@ -450,12 +644,60 @@ class QRScannerActivity : ComponentActivity() {
         smsTimeoutRunnable?.let { smsTimeoutHandler?.removeCallbacks(it) }
         messageHandler?.removeCallbacksAndMessages(null)
         _uiState.update { it.copy(showBlackScreen = false) }
-        setResult(RESULT_SUCCESS)
+
+        val upi = currentUpiData
+        val amount = intent.getStringExtra("amount") ?: upi?.amount ?: "0"
+        val phoneOrVpa = intent.getStringExtra("phone_number") ?: upi?.vpa ?: ""
+        val recipient = intent.getStringExtra("recipient_name") ?: upi?.payeeName ?: ""
+        val txnId = intent.getStringExtra("transaction_id") ?: currentSessionTxnId ?: ""
+        val bankName = intent.getStringExtra("bank_name") ?: "Bank SMS"
+        val status = intent.getStringExtra("status") ?: "SUCCESS"
+
+        Log.d(TAG, "SMS received in QRScannerActivity: navigating to result: $amount, $txnId, $status")
+        launchPaymentResultScreen(
+            amount = amount,
+            phoneNumber = phoneOrVpa,
+            recipientName = recipient,
+            transactionId = txnId,
+            bankName = bankName,
+            status = status
+        )
+    }
+
+    private fun launchPaymentResultScreen(
+        amount: String,
+        phoneNumber: String,
+        recipientName: String,
+        transactionId: String,
+        bankName: String,
+        status: String,
+        errorMessage: String = ""
+    ) {
+        if (!isActivityAlive()) return
+        countdownJob?.cancel()
+        finishedByManualCompletion = true
+        isUSSDProcessActive = false
+        smsTimeoutRunnable?.let { smsTimeoutHandler?.removeCallbacks(it) }
+
+        val intent = Intent(this, PaymentResultActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("amount", amount)
+            putExtra("phone_number", phoneNumber)
+            putExtra("recipient_name", recipientName)
+            putExtra("transaction_id", transactionId)
+            putExtra("bank_name", bankName)
+            putExtra("status", status)
+            if (errorMessage.isNotEmpty()) {
+                putExtra("error_message", errorMessage)
+            }
+        }
+        startActivity(intent)
         finish()
     }
 
     private fun terminateUSSDProcess() {
         try {
+            countdownJob?.cancel()
             isUSSDProcessActive = false
             messageHandler?.removeCallbacksAndMessages(null)
             smsTimeoutRunnable?.let { smsTimeoutHandler?.removeCallbacks(it) }
@@ -464,7 +706,7 @@ class QRScannerActivity : ComponentActivity() {
             } catch (e: Exception) {}
             ProximityApplication.from(this)?.paymentSessionManager?.onUserCancelled()
             updateBlackScreenStatus(R.string.qr_status_terminated)
-            _uiState.update { it.copy(showTerminateButtons = false) }
+            _uiState.update { it.copy(showTerminateButtons = false, isAwaitingConfirmation = false) }
             mainHandler.postDelayed({
                 if (!isActivityAlive()) return@postDelayed
                 setResult(RESULT_CANCELLED)
@@ -577,6 +819,7 @@ class QRScannerActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
+        isActivityResumed = false
         try { LocalBroadcastManager.getInstance(this).sendBroadcast(Intent("APP_PAUSED")) } catch (e: Exception) {}
         try { imageAnalyzer?.clearAnalyzer() } catch (e: Exception) {}
     }
@@ -588,6 +831,25 @@ class QRScannerActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        isActivityResumed = true
+
+        // Check if user returned after enabling Accessibility in Settings
+        val pending = pendingUpiData
+        if (pending != null && UssdAccessibilityService.isAccessibilityEnabled(this)) {
+            pendingUpiData = null
+            _uiState.update { it.copy(showA11yPrompt = false) }
+            proceedWithPayment(pending)
+            return
+        }
+
+        val detected = UssdAccessibilityService.latestResult
+        if (detected != null && detected.status == UssdStatus.SUCCESS) {
+            if (_uiState.value.isAwaitingConfirmation || isUSSDProcessActive) {
+                Log.d(TAG, "onResume: USSD success detected! Navigating to result.")
+                completeSuccessFromDetected(detected)
+                return
+            }
+        }
         try {
             if (!::cameraExecutor.isInitialized || cameraExecutor.isShutdown) return
             if (imageAnalyzer != null && !isProcessingQRCode) {
@@ -599,6 +861,9 @@ class QRScannerActivity : ComponentActivity() {
 
     override fun onDestroy() {
         try {
+            countdownJob?.cancel()
+            UssdAccessibilityService.ussdPaymentActive = false
+            UssdAccessibilityService.ussdCallback = null
             mainHandler.removeCallbacksAndMessages(null)
             try { LocalBroadcastManager.getInstance(this).sendBroadcast(Intent("APP_DESTROYED")) } catch (e: Exception) {}
             isUSSDProcessActive = false
@@ -634,14 +899,27 @@ fun QRScannerScreen(
     onBackClick: () -> Unit,
     onTerminateClick: () -> Unit,
     onUssdCompletedClick: () -> Unit,
+    onAwaitingDoneClick: () -> Unit,
     onFlashClick: () -> Unit,
-    onGalleryClick: () -> Unit
+    onGalleryClick: () -> Unit,
+    onA11yEnableClick: () -> Unit,
+    onA11yContinueClick: () -> Unit,
+    onA11yDismissClick: () -> Unit
 ) {
+    if (state.showA11yPrompt) {
+        UssdAccessibilityPromptDialog(
+            onEnableClick = onA11yEnableClick,
+            onContinueClick = onA11yContinueClick,
+            onDismissClick = onA11yDismissClick
+        )
+    }
+
     if (state.showBlackScreen) {
         BlackScreenOverlay(
             state = state,
             onTerminateClick = onTerminateClick,
-            onUssdCompletedClick = onUssdCompletedClick
+            onUssdCompletedClick = onUssdCompletedClick,
+            onAwaitingDoneClick = onAwaitingDoneClick
         )
     } else {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -837,7 +1115,8 @@ fun ScannerOverlay(
 fun BlackScreenOverlay(
     state: QRScannerState,
     onTerminateClick: () -> Unit,
-    onUssdCompletedClick: () -> Unit
+    onUssdCompletedClick: () -> Unit,
+    onAwaitingDoneClick: () -> Unit
 ) {
     val accent = LocalProximityAccentTheme.current
 
@@ -850,102 +1129,204 @@ fun BlackScreenOverlay(
     ) {
         AnimatedContourBackground(modifier = Modifier.fillMaxSize())
 
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .padding(24.dp)
-        ) {
-            if (!state.instructionsExpanded) {
-                Text(
-                    text = "Follow instructions...",
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 18.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+        if (state.isAwaitingConfirmation) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                CircularProgressIndicator(
+                    color = accent.primary,
+                    strokeWidth = 3.5.dp,
+                    modifier = Modifier.size(52.dp)
                 )
-            } else {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Waiting for bank confirmation…",
+                    fontSize = 20.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
+                    text = "Checking SMS & payment receipt\n(${state.countdownSeconds}s remaining)",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                OutlinedButton(
+                    onClick = onAwaitingDoneClick,
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .height(48.dp)
+                        .pressScale(onClick = onAwaitingDoneClick),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Check Status Later",
+                        fontSize = 14.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .padding(24.dp)
+            ) {
+                if (!state.instructionsExpanded) {
+                    Text(
+                        text = "Follow instructions...",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 18.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "1. Copy VPA\n2. Paste in dialer\n3. Complete payment",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 16.sp,
+                                lineHeight = 24.sp,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+            }
+
+            val text = state.blackScreenStatusMessage
+                ?: state.blackScreenStatusRes?.let { res ->
+                    state.blackScreenStatusFormatArg?.let { arg ->
+                        stringResource(res, arg)
+                    } ?: stringResource(res)
+                }
+                ?: ""
+
+            Text(
+                text = text,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 18.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(32.dp)
+            )
+
+            if (state.showTerminateButtons) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = onUssdCompletedClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .pressScale(onClick = onUssdCompletedClick),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = accent.primary)
+                    ) {
                         Text(
-                            text = "1. Copy VPA\n2. Paste in dialer\n3. Complete payment",
-                            color = MaterialTheme.colorScheme.onSurface,
+                            text = stringResource(R.string.ussd_accessibility_confirm_button),
                             fontSize = 16.sp,
-                            lineHeight = 24.sp,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
-                            modifier = Modifier.fillMaxWidth()
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = onTerminateClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .pressScale(onClick = onTerminateClick),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, StatusRed.copy(alpha = 0.4f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusRed)
+                    ) {
+                        Text(
+                            text = "Terminate",
+                            fontSize = 16.sp,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                         )
                     }
                 }
             }
         }
+    }
+}
 
-        val text = state.blackScreenStatusMessage
-            ?: state.blackScreenStatusRes?.let { res ->
-                state.blackScreenStatusFormatArg?.let { arg ->
-                    stringResource(res, arg)
-                } ?: stringResource(res)
-            }
-            ?: ""
+@Composable
+fun UssdAccessibilityPromptDialog(
+    onEnableClick: () -> Unit,
+    onContinueClick: () -> Unit,
+    onDismissClick: () -> Unit
+) {
+    val accent = LocalProximityAccentTheme.current
 
-        Text(
-            text = text,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 18.sp,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .padding(32.dp)
-        )
-
-        if (state.showTerminateButtons) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(32.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+    AlertDialog(
+        onDismissRequest = onDismissClick,
+        title = {
+            Text(
+                text = "Enable Accessibility Service",
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
+        text = {
+            Text(
+                text = "To automatically detect USSD payment success, amount, recipient name, and reference ID, Proximity needs Accessibility Service enabled for reading USSD dialogs.\n\nWithout it, payment confirmation will rely entirely on bank SMS.",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 20.sp
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onEnableClick,
+                colors = ButtonDefaults.buttonColors(containerColor = accent.primary),
+                shape = RoundedCornerShape(10.dp)
             ) {
-                Button(
-                    onClick = onUssdCompletedClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                        .pressScale(onClick = onUssdCompletedClick),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = accent.primary)
-                ) {
-                    Text(
-                        text = "I completed it",
-                        fontSize = 16.sp,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                        color = Color.White
-                    )
+                Text("Enable in Settings", color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+            }
+        },
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onDismissClick) {
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                OutlinedButton(
-                    onClick = onTerminateClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                        .pressScale(onClick = onTerminateClick),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, StatusRed.copy(alpha = 0.4f)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusRed)
-                ) {
-                    Text(
-                        text = "Terminate",
-                        fontSize = 16.sp,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
-                    )
+                TextButton(onClick = onContinueClick) {
+                    Text("Continue Anyway", color = accent.primary)
                 }
             }
         }
-    }
+    )
 }
