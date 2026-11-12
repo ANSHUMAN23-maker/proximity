@@ -379,6 +379,9 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         helper.onDestroy()
+        if (isFinishing) {
+            com.proximity.app.accessibility.UssdAccessibilityService.disableService()
+        }
     }
 }
 

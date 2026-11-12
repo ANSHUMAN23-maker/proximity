@@ -144,6 +144,7 @@ class QRScannerActivity : ComponentActivity() {
     @Volatile private var finishedByWaitingScreenTimeout = false
     @Volatile private var finishedByManualCompletion = false
     private var didCopyVpa = false
+    private var userSkippedA11y = false
     private var currentUpiData: UPIData? = null
     private var pendingUpiData: UPIData? = null
     private var countdownJob: Job? = null
@@ -224,6 +225,12 @@ class QRScannerActivity : ComponentActivity() {
 
         checkPermissionsAndStartCamera()
 
+        val a11yEnabled = UssdAccessibilityService.isAccessibilityEnabled(this)
+        Log.d(TAG, "onCreate: accessibilityEnabled=$a11yEnabled")
+        if (!a11yEnabled) {
+            _uiState.update { it.copy(showA11yPrompt = true) }
+        }
+
         val app = application as? ProximityApplication
         val settingsRepository = app?.settingsRepository ?: com.proximity.app.data.SettingsRepository(applicationContext)
 
@@ -264,6 +271,7 @@ class QRScannerActivity : ComponentActivity() {
                             startActivity(intent)
                         },
                         onA11yContinueClick = {
+                            userSkippedA11y = true
                             val pending = pendingUpiData
                             pendingUpiData = null
                             _uiState.update { it.copy(showA11yPrompt = false) }
@@ -272,10 +280,16 @@ class QRScannerActivity : ComponentActivity() {
                             }
                         },
                         onA11yDismissClick = {
+                            val pending = pendingUpiData
                             pendingUpiData = null
                             isProcessingQRCode = false
                             _uiState.update { it.copy(showA11yPrompt = false, isProcessing = false) }
-                            imageAnalyzer?.setAnalyzer(cameraExecutor, QRCodeAnalyzer { qrCode -> processQRCode(qrCode) })
+                            if (pending == null) {
+                                setResult(RESULT_CANCELLED)
+                                finish()
+                            } else {
+                                imageAnalyzer?.setAnalyzer(cameraExecutor, QRCodeAnalyzer { qrCode -> processQRCode(qrCode) })
+                            }
                         }
                     )
                 }
@@ -352,7 +366,7 @@ class QRScannerActivity : ComponentActivity() {
 
     private fun initiateUSSDPayment(upiData: UPIData) {
         val a11yEnabled = UssdAccessibilityService.isAccessibilityEnabled(this)
-        if (!a11yEnabled) {
+        if (!a11yEnabled && !userSkippedA11y) {
             pendingUpiData = upiData
             _uiState.update { it.copy(showA11yPrompt = true) }
             return
@@ -678,6 +692,8 @@ class QRScannerActivity : ComponentActivity() {
         finishedByManualCompletion = true
         isUSSDProcessActive = false
         smsTimeoutRunnable?.let { smsTimeoutHandler?.removeCallbacks(it) }
+        // System-level disable: turns off accessibility once payment completes
+        UssdAccessibilityService.disableService()
 
         val intent = Intent(this, PaymentResultActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -705,6 +721,8 @@ class QRScannerActivity : ComponentActivity() {
                 TransactionDetector.getInstance(this).stopOperation()
             } catch (e: Exception) {}
             ProximityApplication.from(this)?.paymentSessionManager?.onUserCancelled()
+            // System-level disable: turns off accessibility when payment is terminated/cancelled
+            UssdAccessibilityService.disableService()
             updateBlackScreenStatus(R.string.qr_status_terminated)
             _uiState.update { it.copy(showTerminateButtons = false, isAwaitingConfirmation = false) }
             mainHandler.postDelayed({
@@ -834,12 +852,16 @@ class QRScannerActivity : ComponentActivity() {
         isActivityResumed = true
 
         // Check if user returned after enabling Accessibility in Settings
-        val pending = pendingUpiData
-        if (pending != null && UssdAccessibilityService.isAccessibilityEnabled(this)) {
-            pendingUpiData = null
+        val a11yEnabled = UssdAccessibilityService.isAccessibilityEnabled(this)
+        Log.d(TAG, "onResume: accessibilityEnabled=$a11yEnabled")
+        if (a11yEnabled) {
             _uiState.update { it.copy(showA11yPrompt = false) }
-            proceedWithPayment(pending)
-            return
+            val pending = pendingUpiData
+            if (pending != null) {
+                pendingUpiData = null
+                proceedWithPayment(pending)
+                return
+            }
         }
 
         val detected = UssdAccessibilityService.latestResult

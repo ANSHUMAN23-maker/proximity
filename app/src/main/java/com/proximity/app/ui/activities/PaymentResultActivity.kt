@@ -43,6 +43,8 @@ import kotlinx.coroutines.delay
 class PaymentResultActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // System-level disable: turns off accessibility service now that payment is completed
+        com.proximity.app.accessibility.UssdAccessibilityService.disableService()
         val app = application as? ProximityApplication
         val settingsRepository = app?.settingsRepository ?: com.proximity.app.data.SettingsRepository(applicationContext)
 

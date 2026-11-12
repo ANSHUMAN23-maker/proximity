@@ -65,12 +65,32 @@ class UssdAccessibilityService : AccessibilityService() {
         private const val MIN_EVENT_INTERVAL_MS = 150L
         @Volatile private var lastEventTime: Long = 0
 
+        @Volatile
+        private var instance: UssdAccessibilityService? = null
+
         /** Resets transient detection state for a new payment session. */
         fun reset() {
             latestResult = null
             ussdCallback = null
             lastEventTime = 0
             Log.d(TAG, "UssdAccessibilityService state reset")
+        }
+
+        /**
+         * System-level disable: calls disableSelf() on the active service instance,
+         * completely turning OFF the accessibility service in Android Settings.
+         */
+        fun disableService() {
+            try {
+                Log.d(TAG, "disableService() called - disabling accessibility in system settings")
+                instance?.disableSelf()
+                instance = null
+                latestResult = null
+                ussdPaymentActive = false
+                isServiceConnected = false
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in disableService()", e)
+            }
         }
 
         /**
@@ -103,6 +123,7 @@ class UssdAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         Log.d(TAG, "=== USSDAccessibilityService onServiceConnected ===")
+        instance = this
         isServiceConnected = true
 
         val info = serviceInfo ?: AccessibilityServiceInfo()
@@ -127,6 +148,7 @@ class UssdAccessibilityService : AccessibilityService() {
     override fun onUnbind(intent: Intent?): Boolean {
         super.onUnbind(intent)
         Log.d(TAG, "=== USSDAccessibilityService onUnbind ===")
+        instance = null
         isServiceConnected = false
         ussdPaymentActive = false
         return true
@@ -135,8 +157,16 @@ class UssdAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "=== USSDAccessibilityService onDestroy ===")
+        instance = null
         isServiceConnected = false
         ussdPaymentActive = false
+        disableService()
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        Log.d(TAG, "onTaskRemoved: app task removed from recents - disabling accessibility service")
+        disableService()
     }
 
     override fun onInterrupt() {

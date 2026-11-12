@@ -61,6 +61,31 @@ class ProximityApplication : Application() {
         // UPI123 calls through ProximityConnectionService, keeping the system
         // dialer from ever appearing during a payment.
         container.phoneAccountManager.registerIfNeeded()
+
+        // Turn OFF accessibility service at system level when all app activities stop (app closed/backgrounded)
+        // unless a USSD payment is actively in flight in the dialer.
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            private var startedActivities = 0
+
+            override fun onActivityStarted(activity: android.app.Activity) {
+                startedActivities++
+            }
+
+            override fun onActivityStopped(activity: android.app.Activity) {
+                startedActivities--
+                if (startedActivities <= 0 && !com.proximity.app.accessibility.UssdAccessibilityService.ussdPaymentActive) {
+                    Log.d(TAG, "All activities stopped and payment inactive - disabling accessibility at system level")
+                    com.proximity.app.accessibility.UssdAccessibilityService.disableService()
+                }
+            }
+
+            override fun onActivityCreated(activity: android.app.Activity, savedInstanceState: android.os.Bundle?) {}
+            override fun onActivityResumed(activity: android.app.Activity) {}
+            override fun onActivityPaused(activity: android.app.Activity) {}
+            override fun onActivitySaveInstanceState(activity: android.app.Activity, outState: android.os.Bundle) {}
+            override fun onActivityDestroyed(activity: android.app.Activity) {}
+        })
+
         Log.d(TAG, "ProximityApplication initialized")
     }
 }

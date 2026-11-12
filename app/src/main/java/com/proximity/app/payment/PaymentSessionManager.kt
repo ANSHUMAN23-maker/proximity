@@ -80,9 +80,11 @@ class PaymentSessionManager(
         upiId: String? = null,
         source: String = TransactionSource.MANUAL
     ): String {
-        // Activate USSD accessibility payment detection for any new payment session
-        UssdAccessibilityService.ussdPaymentActive = true
-        Log.d(TAG, "Payment session begun - USSD accessibility detection activated")
+        if (source == TransactionSource.QR) {
+            // Activate USSD accessibility payment detection for QR payment session
+            UssdAccessibilityService.ussdPaymentActive = true
+            Log.d(TAG, "Payment session begun - USSD accessibility detection activated for QR")
+        }
 
         val initiating: PaymentState.Initiating
         val supersededTxnId: String?
@@ -202,6 +204,7 @@ class PaymentSessionManager(
         finishSession(TransactionStatus.CANCELLED) { phone, amount, txnId ->
             PaymentState.Cancelled(phone, amount, txnId, "Cancelled by user")
         }
+        com.proximity.app.accessibility.UssdAccessibilityService.disableService()
     }
 
     /**

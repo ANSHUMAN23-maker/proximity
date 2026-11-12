@@ -891,7 +891,7 @@ fun WelcomeSection(
             Spacer(modifier = Modifier.height(24.dp))
 
             androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(R.drawable.ic_launcher_foreground),
+                painter = androidx.compose.ui.res.painterResource(R.mipmap.ic_launcher_foreground),
                 contentDescription = "Proximity Logo",
                 modifier = Modifier
                     .size(96.dp)

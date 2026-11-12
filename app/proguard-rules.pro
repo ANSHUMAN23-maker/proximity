@@ -90,3 +90,6 @@
 # went away with the ML Kit -> ZXing swap.)
 -dontwarn com.google.errorprone.annotations.**
 -dontwarn javax.lang.model.**
+
+# Suppress missing javax.annotation warnings from Okio/transitives
+-dontwarn javax.annotation.**

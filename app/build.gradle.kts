@@ -92,6 +92,17 @@ android {
             isMinifyEnabled = false
             isDebuggable = true
             buildConfigField("boolean", "DEBUG_LOGS", "true")
+            ndk {
+                abiFilters += listOf("arm64-v8a", "x86_64")
+            }
+        }
+    }
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = true
         }
     }
     compileOptions {
@@ -143,9 +154,11 @@ android {
 // caller explicitly opts in with -PallowUnsigned. This fires only when a
 // release-packaging task actually runs — a configuration-time throw would break
 // debug/test builds (e.g. CI) that legitimately run without a keystore.
-tasks.matching { it.name == "packageRelease" }.configureEach {
-    doFirst {
-        if (!keystorePropertiesFile.exists() && !project.hasProperty("allowUnsigned")) {
+val checkReleaseSigning = tasks.register("checkReleaseSigning") {
+    val allowUnsigned = providers.gradleProperty("allowUnsigned").isPresent
+    val hasKeystore = keystorePropertiesFile.exists()
+    doLast {
+        if (!hasKeystore && !allowUnsigned) {
             throw GradleException(
                 "Release build would be UNSIGNED and uninstallable: keystore.properties is missing. " +
                     "Copy keystore.properties.example and fill it in to sign the release, or pass " +
@@ -153,6 +166,10 @@ tasks.matching { it.name == "packageRelease" }.configureEach {
             )
         }
     }
+}
+
+tasks.matching { it.name.startsWith("packageRelease") }.configureEach {
+    dependsOn(checkReleaseSigning)
 }
 
 // Static analysis: detekt with the ktlint-style formatting ruleset. The
@@ -201,15 +218,12 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
     implementation(libs.compose.material3)
-    implementation(libs.compose.material.icons.extended)
     implementation(libs.lottie.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
 
-    // Constraint Layout
-    implementation(libs.androidx.constraintlayout)
 
     // LocalBroadcastManager — carries the payment-result broadcast in
     // SmsIngestionPipeline and QRScannerActivity. Declared explicitly because
@@ -240,9 +254,6 @@ dependencies {
     implementation("net.zetetic:sqlcipher-android:${libs.versions.sqlcipher.get()}@aar")
     implementation(libs.androidx.sqlite)
 
-    // Material Design
-    implementation(libs.material)
-    implementation(libs.androidx.cardview)
 
 
     testImplementation(libs.junit)

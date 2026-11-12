@@ -45,6 +45,8 @@ class MainActivityHelper(
     }
     fun startQRScanning() {
         Log.d(TAG, "=== STARTING QR SCANNING ===")
+        val a11yEnabled = com.proximity.app.accessibility.UssdAccessibilityService.isAccessibilityEnabled(context)
+        Log.d(TAG, "startQRScanning: accessibilityEnabled=$a11yEnabled")
 
         SetupHelper.getScanToPayBlockedMessage(context)?.let { message ->
             Log.d(TAG, "Scan to pay blocked: $message")
