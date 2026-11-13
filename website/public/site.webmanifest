@@ -1,0 +1,23 @@
+{
+  "name": "Proximity - Offline UPI Payments",
+  "short_name": "Proximity",
+  "description": "Pay merchants and contacts on Android even when mobile data drops to zero.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#008774",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
