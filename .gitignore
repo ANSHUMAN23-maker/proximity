@@ -23,3 +23,23 @@ local.properties
 Thumbs.db
 tools/
 /proximity-branch-accessibility/
+
+# Web / Node build artifacts & dependencies
+node_modules/
+/dist/
+!docs/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+
+# IDEs & System
+.vscode/
+*.log
+workspace_clean.html
+

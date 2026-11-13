@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>404 · Route Not Found · Proximity</title>
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#F8FAFC" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('proximity-theme');
+          var theme = saved === 'dark' || saved === 'light' ? saved : 'light';
+          document.documentElement.setAttribute('data-theme', theme);
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', theme === 'dark' ? '#090D14' : '#F8FAFC');
+        } catch (e) {}
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/notFound-6psMXFuU.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/micro-interactions-Boqg04n7.js">
+    <link rel="stylesheet" crossorigin href="/assets/micro-interactions-DI0wNoJw.css">
+  </head>
+  <body class="not-found-page">
+    <canvas id="antigravity-canvas" class="antigravity-bg" aria-hidden="true"></canvas>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="/" aria-label="Proximity home">
+          <img
+            src="/proximity-mark.png"
+            alt=""
+            width="28"
+            height="28"
+            class="brand-mark"
+          />
+          <span class="brand-wordmark">Proximity</span>
+        </a>
+
+        <div class="header-actions">
+          <button
+            type="button"
+            class="theme-toggle"
+            id="theme-toggle"
+            aria-label="Switch to dark mode"
+            aria-pressed="false"
+          >
+            <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+            </svg>
+            <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="not-found-main">
+      <section class="container not-found-shell glass-panel" aria-labelledby="nf-title">
+        <img
+          src="/proximity-mark.png"
+          alt="Proximity emblem"
+          width="56"
+          height="56"
+          class="not-found-mark"
+        />
+        <p class="not-found-code">Error 404</p>
+        <h1 id="nf-title" class="not-found-title">Signal dropped on this path.</h1>
+        <p class="not-found-lead">
+          The page or asset you requested is unavailable at this route. Head back to the Proximity
+          overview or inspect the Android source repository on GitHub.
+        </p>
+
+        <div class="hero-actions">
+          <a href="/" class="animated-button animated-primary">
+            <svg viewBox="0 0 24 24" class="arr-2" aria-hidden="true">
+              <path d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.7781L10.8076 18.3639L16.1716 12.9999H4V10.9999H16.1716Z"></path>
+            </svg>
+            <span class="text">Back to Home</span>
+            <span class="circle" aria-hidden="true"></span>
+            <svg viewBox="0 0 24 24" class="arr-1" aria-hidden="true">
+              <path d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.7781L10.8076 18.3639L16.1716 12.9999H4V10.9999H16.1716Z"></path>
+            </svg>
+          </a>
+
+          <a
+            href="https://github.com/ANSHUMAN23-maker/proximity"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="animated-button animated-secondary"
+          >
+            <svg viewBox="0 0 24 24" class="arr-2" aria-hidden="true">
+              <path d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.7781L10.8076 18.3639L16.1716 12.9999H4V10.9999H16.1716Z"></path>
+            </svg>
+            <span class="text">View on GitHub</span>
+            <span class="circle" aria-hidden="true"></span>
+            <svg viewBox="0 0 24 24" class="arr-1" aria-hidden="true">
+              <path d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.7781L10.8076 18.3639L16.1716 12.9999H4V10.9999H16.1716Z"></path>
+            </svg>
+          </a>
+        </div>
+      </section>
+    </main>
+
+  </body>
+</html>
