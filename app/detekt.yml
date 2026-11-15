@@ -1,0 +1,10 @@
+build:
+  maxIssues: 0
+style:
+  MagicNumber:
+    active: false
+  MaxLineLength:
+    maxLineLength: 140
+naming:
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']

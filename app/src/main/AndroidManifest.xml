@@ -5,66 +5,40 @@
     <!-- Required permissions for UPI123 payment system -->
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <!-- Lets the in-call overlay's "End call" button actually hang up via TelecomManager.endCall() -->
     <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
-    <!-- Allows routing UPI123 calls through ProximityConnectionService via TelecomManager.placeCall()
-         so the system dialer never appears during a payment. Normal permission — no runtime prompt. -->
-    <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
-    <!-- CAMERA: phone camera for QR scanning -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <!-- SMS detection via BroadcastReceiver. READ_SMS is deliberately NOT
-         requested: the app never reads the SMS inbox, it only receives
-         incoming messages while a payment operation is active. -->
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Payment outcomes are also posted as notifications: the direct
-         result-screen launch from a background receiver rides the
-         overlay-permission exemption and can be silently blocked, and a
-         money outcome must never be unreachable. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!--
-         ACCESS_NETWORK_STATE: lets WalledGardenDetector query active networks.
-         CHANGE_NETWORK_STATE: required for ConnectivityManager.bindProcessToNetwork()
-         which routes the WebView through the operator's captive-portal channel.
-         Both are normal permissions — no runtime prompt required.
-    -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
 
-    <!-- Camera features for QR code scanning -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
-    <!-- Chrome OS compatibility: declare hardware features as optional -->
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
-    <uses-feature android:name="android.hardware.wifi" android:required="false" />
-    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
-    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
-    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
-    <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
 
     <application
-        android:name=".ProximityApplication"
-        android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:name=".AppCore"
+        android:allowBackup="false"
         android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Proximity"
+        android:theme="@style/AppTheme"
         android:networkSecurityConfig="@xml/network_security_config"
-        tools:ignore="LockedOrientationActivity"
-        tools:targetApi="31">
+        tools:targetApi="35">
 
         <!-- Splash Activity (Launcher Entry Point) -->
         <activity
-            android:name=".ui.activities.SplashActivity"
+            android:name=".ui.shell.SplashActivity"
             android:exported="true"
-            android:theme="@style/Theme.Proximity.Splash">
+            android:theme="@style/AppTheme.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -72,72 +46,84 @@
         </activity>
 
         <activity
-            android:name=".SetupActivity"
+            android:name=".ui.onboarding.OnboardingFlowActivity"
             android:exported="false"
-            android:theme="@style/Theme.Proximity" />
+            android:theme="@style/AppTheme" />
         <activity
-            android:name=".TestConfigurationActivity"
+            android:name=".ui.connectivity.ConnectivityCheckActivity"
             android:exported="false"
-            android:theme="@style/Theme.Proximity" />
+            android:theme="@style/AppTheme" />
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.shell.HomeShellActivity"
             android:exported="false"
-            android:theme="@style/Theme.Proximity" />
+            android:theme="@style/AppTheme" />
 
-        <!-- QR Scanner Activity -->
         <activity
-            android:name=".features.qr_scanner.presentation.QRScannerActivity"
+            android:name=".features.qr.QrScannerActivity"
             android:exported="false"
-            android:theme="@style/Theme.Proximity"
+            android:theme="@style/AppTheme"
             android:screenOrientation="portrait" />
 
-        <!-- Payment Success Activity -->
         <activity
-            android:name=".ui.activities.PaymentResultActivity"
+            android:name=".ui.payment.PaymentResultScreen"
             android:exported="false"
             android:theme="@style/PaymentSuccessTheme"
             android:screenOrientation="portrait"
-            android:launchMode="singleTask" />
+            android:launchMode="singleTop" />
 
-        <!-- FAQ Activity -->
         <activity
-            android:name=".ui.activities.FaqActivity"
+            android:name=".ui.payment.PaymentProgressScreen"
             android:exported="false"
-            android:theme="@style/Theme.Proximity"
+            android:theme="@style/AppTheme"
+            android:screenOrientation="portrait"
+            android:launchMode="singleTop" />
+
+        <activity
+            android:name=".ui.payment.PaymentGuidanceScreen"
+            android:exported="false"
+            android:theme="@style/AppTheme"
             android:screenOrientation="portrait" />
 
-        <!-- Pay Contact Activity -->
         <activity
-            android:name=".ui.activities.PayContactActivity"
+            android:name=".ui.payment.RechargeWebScreen"
             android:exported="false"
-            android:theme="@style/Theme.Proximity"
+            android:theme="@style/AppTheme"
             android:screenOrientation="portrait" />
 
-        <!-- Transaction History Activity -->
         <activity
-            android:name=".ui.activities.TransactionHistoryActivity"
+            android:name=".ui.history.TransactionHistoryScreen"
             android:exported="false"
-            android:theme="@style/Theme.Proximity"
+            android:theme="@style/AppTheme"
             android:screenOrientation="portrait" />
 
-        <!-- Settings Activity -->
         <activity
-            android:name=".ui.activities.SettingsActivity"
+            android:name=".ui.settings.SettingsScreen"
             android:exported="false"
-            android:theme="@style/Theme.Proximity"
+            android:theme="@style/AppTheme"
             android:label="@string/settings_title"
-            android:parentActivityName=".MainActivity"
-            android:screenOrientation="portrait">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value=".MainActivity" />
-        </activity>
+            android:screenOrientation="portrait" />
 
+        <activity
+            android:name=".ui.faq.FaqScreen"
+            android:exported="false"
+            android:theme="@style/AppTheme"
+            android:screenOrientation="portrait" />
 
-        <!-- ConnectionService that intercepts UPI123 outgoing calls so the system
-             dialer never appears. Required for TelecomManager.placeCall(). -->
+        <activity
+            android:name=".ui.terms.TermsScreen"
+            android:exported="false"
+            android:theme="@style/AppTheme"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".ui.payment.PayContactScreen"
+            android:exported="false"
+            android:theme="@style/AppTheme"
+            android:screenOrientation="portrait" />
+
+        <!-- Telecom ConnectionService for UPI123 call routing -->
         <service
-            android:name=".telecom.ProximityConnectionService"
+            android:name=".telephony.CallRouterService"
             android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE"
             android:exported="true">
             <intent-filter>
@@ -145,25 +131,9 @@
             </intent-filter>
         </service>
 
-        <!-- Full-screen in-app payment progress screen (replaces the WindowManager overlay) -->
-        <activity
-            android:name=".ui.activities.PaymentProgressActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Proximity"
-            android:screenOrientation="portrait"
-            android:launchMode="singleTask" />
-
-        <activity
-            android:name=".ui.activities.PaymentGuidanceActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Proximity"
-            android:screenOrientation="portrait" />
-
-
-
-        <!-- USSD Accessibility Service for reading USSD payment dialogs -->
+        <!-- USSD Accessibility Service -->
         <service
-            android:name=".accessibility.UssdAccessibilityService"
+            android:name=".accessibility.UssdDialogReaderService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="true">
             <intent-filter>
@@ -174,32 +144,15 @@
                 android:resource="@xml/ussd_accessibility_service" />
         </service>
 
+        <!-- SMS Receiver -->
         <receiver
-            android:name=".receivers.SimpleSMSReceiver"
+            android:name=".receivers.SmsMonitorReceiver"
+            android:permission="android.permission.BROADCAST_SMS"
             android:exported="true">
             <intent-filter android:priority="999">
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
         </receiver>
 
-        <activity
-            android:name=".ui.activities.RechargeWebActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Proximity"
-            android:screenOrientation="portrait" />
-
-        <activity
-            android:name=".ui.activities.TermsActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Proximity"
-            android:screenOrientation="portrait" />
-
-        <!-- Foreground service that shows payment progress overlay on top of other apps during USSD payments -->
-        <service
-            android:name=".overlay.OverlayWindowService"
-            android:foregroundServiceType="mediaProjection"
-            android:exported="false" />
-
     </application>
-
 </manifest>
