@@ -3,6 +3,7 @@
 
 package com.proximity.app.ui.components
 
+import android.annotation.SuppressLint
 import android.view.HapticFeedbackConstants
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
@@ -79,6 +80,7 @@ enum class ShellNavTab(
     SETTINGS(2, R.string.nav_settings, R.drawable.ic_settings)
 }
 
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun BottomNavBar(
     activeTab: ShellNavTab,

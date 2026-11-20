@@ -10,3 +10,10 @@ Proximity is a clean-room, local-first offline UPI payment aggregator and mobile
 2. **Pay Phone / Contact (`UPI 123Pay` IVR `08045163666`)**: Two-step recipient + whole-rupee (`Rs 1` to `Rs 4,999`) input with searchable contact picker, pre-call step-by-step guidance screen, `CallRouterService` (`android.telecom.InCallService`) keeping the system dialer behind the in-app full-screen `PaymentProgressScreen`, 5-second minimum call duration enforcement via `CallMonitor`, and bank SMS verification.
 3. **In-App Carrier Recharge (`RechargeWebScreen`)**: Cellular-bound WebView (`ConnectivityManager.bindProcessToNetwork`) for Jio, Airtel, Vi, and BSNL portals with shimmer skeleton loader, `upi://` and `intent://` deep-link handoff, SSL error user confirmation dialog, and error retry state.
 4. **Encrypted Local Vault (`LocalVaultDatabase`)**: SQLCipher 4.6.1 encrypted Room database backed by an Android Keystore `AES/GCM/NoPadding` 256-bit master key (`VaultKeyManager`) with self-healing key regeneration on corruption and zero raw SMS storage (synthesized privacy-safe excerpts only).
+
+## License & Intellectual Property
+
+Copyright &copy; 2024-2026 **Proximity**. All rights reserved.
+
+This software, source code, design systems, and documentation are **proprietary and confidential**. Unauthorized copying, modification, redistribution, reverse engineering, or commercial use without prior written consent from **Proximity** is strictly prohibited. See the [LICENSE](LICENSE) file for complete terms.
+

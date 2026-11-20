@@ -10,3 +10,6 @@ keystore.properties
 .idea/
 *.iml
 .kotlin/
+app/release/
+release/
+*.dm
